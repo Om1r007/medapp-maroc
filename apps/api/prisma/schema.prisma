@@ -1,0 +1,172 @@
+// Prisma schema — Medapp Maroc
+// Doc: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// USERS & AUTH
+// ============================================================
+
+enum UserRole {
+  PATIENT
+  DOCTOR
+  ADMIN
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  phone        String   @unique
+  passwordHash String
+  role         UserRole
+  isActive     Boolean  @default(true)
+  emailVerifiedAt DateTime?
+  phoneVerifiedAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  patient Patient?
+  doctor  Doctor?
+
+  @@index([email])
+  @@index([phone])
+}
+
+// ============================================================
+// PATIENTS
+// ============================================================
+
+model Patient {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  firstName   String
+  lastName    String
+  cin         String   @unique
+  dateOfBirth DateTime
+
+  consultations Consultation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cin])
+}
+
+// ============================================================
+// DOCTORS
+// ============================================================
+
+enum DoctorStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+model Doctor {
+  id              String       @id @default(cuid())
+  userId          String       @unique
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  firstName       String
+  lastName        String
+  cin             String       @unique
+  ordreNumber     String       @unique // N° Ordre National des Médecins
+  speciality      String
+  bio             String?
+  consultationFee Decimal      @default(150.00) @db.Decimal(10, 2) // MAD
+  status          DoctorStatus @default(PENDING)
+  isAvailable     Boolean      @default(false)
+
+  consultations Consultation[]
+  ratings       Rating[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, isAvailable])
+  @@index([speciality])
+}
+
+// ============================================================
+// CONSULTATIONS
+// ============================================================
+
+enum ConsultationStatus {
+  WAITING_PAYMENT
+  IN_QUEUE
+  MATCHED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+model Consultation {
+  id            String             @id @default(cuid())
+  patientId     String
+  patient       Patient            @relation(fields: [patientId], references: [id])
+  doctorId      String?
+  doctor        Doctor?            @relation(fields: [doctorId], references: [id])
+
+  status        ConsultationStatus @default(WAITING_PAYMENT)
+  reason        String?            // Motif de consultation indiqué par le patient
+  diagnosis     String?            // Compte-rendu du médecin
+  prescription  String?
+
+  amount        Decimal            @db.Decimal(10, 2) // MAD
+  paymentStatus PaymentStatus      @default(PENDING)
+  paymentRef    String?            // Référence transaction CMI
+
+  videoRoomUrl  String?
+  videoRoomId   String?
+
+  queuedAt   DateTime?
+  matchedAt  DateTime?
+  startedAt  DateTime?
+  endedAt    DateTime?
+
+  rating Rating?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([patientId, createdAt])
+  @@index([doctorId, createdAt])
+}
+
+// ============================================================
+// RATING (non visible côté patient → côté médecin uniquement)
+// ============================================================
+
+model Rating {
+  id             String       @id @default(cuid())
+  consultationId String       @unique
+  consultation   Consultation @relation(fields: [consultationId], references: [id])
+  doctorId       String
+  doctor         Doctor       @relation(fields: [doctorId], references: [id])
+
+  score    Int    // 1 à 5
+  comment  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([doctorId])
+}

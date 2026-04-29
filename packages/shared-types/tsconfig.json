@@ -1,0 +1,4 @@
+{
+  "extends": "@medapp/config/tsconfig/base.json",
+  "include": ["src/**/*"]
+}
