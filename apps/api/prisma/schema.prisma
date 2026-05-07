@@ -141,10 +141,11 @@ model Consultation {
   videoRoomUrl  String?
   videoRoomId   String?
 
-  queuedAt   DateTime?
-  matchedAt  DateTime?
-  startedAt  DateTime?
-  endedAt    DateTime?
+  queuedAt            DateTime?
+  matchedAt           DateTime?
+  startedAt           DateTime?
+  endedAt             DateTime?
+  autoClosedByTimeout Boolean   @default(false)
 
   rating Rating?
 

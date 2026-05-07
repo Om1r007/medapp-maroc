@@ -9,6 +9,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { QueueService } from "../queue/queue.service";
 import { VideoService } from "../video/video.service";
 import { AvailabilityService } from "../availability/availability.service";
+import { ConsultationsService } from "../consultations/consultations.service";
 import { EndConsultationDto } from "../consultations/dto/end-consultation.dto";
 import type { DoctorProfile } from "@medapp/shared-types";
 
@@ -21,6 +22,7 @@ export class DoctorsService {
     private readonly queueService: QueueService,
     private readonly videoService: VideoService,
     private readonly availabilityService: AvailabilityService,
+    private readonly consultationsService: ConsultationsService,
   ) {}
 
   async getMe(userId: string): Promise<DoctorProfile> {
@@ -137,6 +139,10 @@ export class DoctorsService {
         videoRoomUrl: true,
       },
     });
+  }
+
+  async getIncompleteConsultations(userId: string) {
+    return this.consultationsService.getIncomplete(userId);
   }
 
   async endConsultation(

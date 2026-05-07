@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -28,9 +29,60 @@ export class ConsultationsService {
     private readonly videoService: VideoService,
   ) {}
 
+  async getActive(userId: string) {
+    const patient = await this.prisma.patient.findUnique({ where: { userId } });
+    if (!patient) return null;
+
+    return this.prisma.consultation.findFirst({
+      where: {
+        patientId: patient.id,
+        status: { in: ["WAITING_PAYMENT", "IN_QUEUE", "MATCHED", "IN_PROGRESS"] },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, status: true, reason: true, amount: true, createdAt: true },
+    });
+  }
+
+  async getIncomplete(userId: string) {
+    const doctor = await this.prisma.doctor.findUnique({ where: { userId } });
+    if (!doctor) throw new NotFoundException("Médecin introuvable");
+
+    return this.prisma.consultation.findMany({
+      where: {
+        doctorId: doctor.id,
+        status: "COMPLETED",
+        autoClosedByTimeout: true,
+        diagnosis: null,
+      },
+      orderBy: { endedAt: "desc" },
+      select: {
+        id: true,
+        endedAt: true,
+        startedAt: true,
+        reason: true,
+        amount: true,
+        patient: { select: { firstName: true, lastName: true } },
+      },
+    });
+  }
+
   async create(userId: string, dto: CreateConsultationDto): Promise<Consultation> {
     const patient = await this.prisma.patient.findUnique({ where: { userId } });
     if (!patient) throw new NotFoundException("Patient introuvable");
+
+    const active = await this.prisma.consultation.findFirst({
+      where: {
+        patientId: patient.id,
+        status: { in: ["WAITING_PAYMENT", "IN_QUEUE", "MATCHED", "IN_PROGRESS"] },
+      },
+      select: { id: true },
+    });
+    if (active) {
+      throw new ConflictException({
+        message: "Vous avez déjà une consultation en cours",
+        existingConsultationId: active.id,
+      });
+    }
 
     const consultation = await this.prisma.consultation.create({
       data: {

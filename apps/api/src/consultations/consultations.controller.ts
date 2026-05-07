@@ -28,6 +28,12 @@ export class ConsultationsController {
     return this.consultations.create(req.user.id, dto);
   }
 
+  @Get("me/active")
+  @Roles("PATIENT")
+  getActive(@Request() req: { user: { id: string } }) {
+    return this.consultations.getActive(req.user.id);
+  }
+
   @Get("me")
   @Roles("PATIENT")
   findMine(@Request() req: { user: { id: string } }) {

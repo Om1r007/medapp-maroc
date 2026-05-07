@@ -6,10 +6,12 @@ import { VideoModule } from "../video/video.module";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { ConsultationsController } from "./consultations.controller";
 import { ConsultationsService } from "./consultations.service";
+import { AutoCloseSchedulerService } from "./auto-close-scheduler.service";
 
 @Module({
   imports: [PrismaModule, PaymentProviderModule, QueueModule, VideoModule],
   controllers: [ConsultationsController],
-  providers: [ConsultationsService, RolesGuard],
+  providers: [ConsultationsService, AutoCloseSchedulerService, RolesGuard],
+  exports: [ConsultationsService],
 })
 export class ConsultationsModule {}

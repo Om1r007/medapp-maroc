@@ -191,7 +191,7 @@ export default function DoctorDashboardPage() {
                 </button>
 
                 {showOverrideMenu && (
-                  <div className="absolute right-0 top-full z-20 mt-1 w-64 rounded-xl border border-gray-200 bg-white shadow-lg">
+                  <div className="absolute right-0 top-full z-50 mt-1 w-64 rounded-xl border border-gray-200 bg-white shadow-lg">
                     {OVERRIDE_OPTIONS.map((opt) => (
                       <button
                         key={opt.label}
@@ -236,10 +236,10 @@ export default function DoctorDashboardPage() {
 
       </div>
 
-      {/* Ferme le menu en cliquant ailleurs */}
+      {/* Ferme le menu en cliquant ailleurs — z-40 sous le dropdown (z-50) */}
       {showOverrideMenu && (
         <div
-          className="fixed inset-0 z-10"
+          className="fixed inset-0 z-40"
           onClick={() => setShowOverrideMenu(false)}
         />
       )}

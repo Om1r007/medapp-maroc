@@ -68,10 +68,13 @@ export default function DoctorConsultationPage() {
     <main className="flex h-screen bg-gray-900 overflow-hidden">
       {/* Video area */}
       <div className="flex-1 flex flex-col">
-        <header className="flex items-center px-6 py-3 bg-gray-800">
+        <header className="flex items-center justify-between px-6 py-3 bg-gray-800">
           <p className="text-white font-medium">
             Consultation —{" "}
             {patient ? `${patient.firstName} ${patient.lastName}` : "Patient"}
+          </p>
+          <p className="text-xs text-amber-400">
+            ⚠️ Cette consultation sera automatiquement clôturée 1h après son démarrage. Pensez à cliquer sur Terminer pour saisir votre compte-rendu.
           </p>
         </header>
         <div className="flex-1">

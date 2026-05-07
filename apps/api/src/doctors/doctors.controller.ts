@@ -51,6 +51,12 @@ export class DoctorsController {
     return this.doctors.startConsultation(consultationId, req.user.id);
   }
 
+  @Get("me/incomplete-consultations")
+  @UseGuards(JwtAuthGuard, DoctorVerifiedGuard)
+  getIncompleteConsultations(@Request() req: { user: { id: string } }) {
+    return this.doctors.getIncompleteConsultations(req.user.id);
+  }
+
   @Post("me/end-consultation/:consultationId")
   @HttpCode(200)
   @UseGuards(JwtAuthGuard, DoctorVerifiedGuard)

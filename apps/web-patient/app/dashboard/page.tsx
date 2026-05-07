@@ -7,6 +7,17 @@ import { useAuthStore } from "@/lib/auth-store";
 import { api } from "@/lib/api";
 import type { Consultation } from "@medapp/shared-types";
 
+const ACTIVE_STATUSES = ["WAITING_PAYMENT", "IN_QUEUE", "MATCHED", "IN_PROGRESS"] as const;
+type ActiveStatus = (typeof ACTIVE_STATUSES)[number];
+
+interface ActiveConsultation {
+  id: string;
+  status: ActiveStatus;
+  reason: string | null;
+  amount: number;
+  createdAt: string;
+}
+
 const STATUS_LABELS: Record<Consultation["status"], string> = {
   WAITING_PAYMENT: "En attente de paiement",
   IN_QUEUE: "Dans la file",
@@ -27,6 +38,12 @@ const STATUS_COLORS: Record<Consultation["status"], string> = {
   REFUNDED: "bg-gray-100 text-gray-600",
 };
 
+function getActiveRedirect(status: ActiveStatus, id: string): string {
+  if (status === "WAITING_PAYMENT") return `/payment/${id}`;
+  if (status === "IN_QUEUE") return `/queue/${id}`;
+  return `/consultation/${id}`;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
@@ -38,6 +55,12 @@ export default function DashboardPage() {
   const { data: consultations } = useQuery({
     queryKey: ["consultations-me"],
     queryFn: () => api.get<Consultation[]>("/consultations/me"),
+    enabled: !!user,
+  });
+
+  const { data: activeConsultation } = useQuery({
+    queryKey: ["consultation-active"],
+    queryFn: () => api.get<ActiveConsultation | null>("/consultations/me/active"),
     enabled: !!user,
   });
 
@@ -68,12 +91,32 @@ export default function DashboardPage() {
           <p className="mt-2 text-gray-600">
             Consultez un médecin en quelques minutes. Tarif : 150 MAD.
           </p>
-          <button
-            onClick={() => router.push("/consultations/new")}
-            className="mt-4 rounded-lg bg-brand px-6 py-3 font-medium text-white hover:bg-brand/90"
-          >
-            Consulter un médecin maintenant
-          </button>
+
+          {activeConsultation ? (
+            <div className="mt-4">
+              <button
+                onClick={() =>
+                  router.push(getActiveRedirect(activeConsultation.status, activeConsultation.id))
+                }
+                className="rounded-lg bg-amber-500 px-6 py-3 font-medium text-white hover:bg-amber-600"
+              >
+                Reprendre ma consultation en cours →
+              </button>
+              <p className="mt-2 text-sm text-gray-500">
+                Vous ne pouvez démarrer qu'une consultation à la fois.{" "}
+                <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[activeConsultation.status]}`}>
+                  {STATUS_LABELS[activeConsultation.status]}
+                </span>
+              </p>
+            </div>
+          ) : (
+            <button
+              onClick={() => router.push("/consultations/new")}
+              className="mt-4 rounded-lg bg-brand px-6 py-3 font-medium text-white hover:bg-brand/90"
+            >
+              Consulter un médecin maintenant
+            </button>
+          )}
         </section>
 
         <section className="mt-6 rounded-2xl bg-white p-8 shadow-sm">
@@ -94,6 +137,10 @@ export default function DashboardPage() {
                       router.push(`/payment/${c.id}`);
                     } else if (c.status === "IN_QUEUE") {
                       router.push(`/queue/${c.id}`);
+                    } else if (c.status === "MATCHED" || c.status === "IN_PROGRESS") {
+                      router.push(`/consultation/${c.id}`);
+                    } else if (c.status === "COMPLETED") {
+                      router.push(`/consultations/${c.id}/summary`);
                     }
                   }}
                 >
