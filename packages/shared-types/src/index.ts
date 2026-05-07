@@ -57,8 +57,6 @@ export interface AuthResponse {
 export interface PublicUser {
   id: string;
   email: string;
-  firstName: string;
-  lastName: string;
   role: UserRole;
 }
 
@@ -76,6 +74,24 @@ export interface Patient {
 }
 
 // ---------- Doctor ----------
+
+// Profil complet retourné par GET /doctors/me
+export interface DoctorProfile {
+  id: string;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  cin: string;
+  ordreNumber: string;
+  speciality: string;
+  status: DoctorStatus;
+  isAvailable: boolean;
+  consultationFee: number;
+  createdAt: string;
+}
+
 export interface Doctor {
   id: string;
   userId: string;
@@ -94,6 +110,10 @@ export interface Doctor {
 }
 
 // ---------- Consultation ----------
+export interface CreateConsultationDto {
+  reason?: string;
+}
+
 export interface Consultation {
   id: string;
   patientId: string;
@@ -101,6 +121,7 @@ export interface Consultation {
   status: ConsultationStatus;
   amount: number; // en MAD
   paymentStatus: PaymentStatus;
+  paymentRef?: string;
   reason?: string;
   diagnosis?: string;
   prescription?: string;
@@ -109,6 +130,44 @@ export interface Consultation {
   startedAt?: string;
   endedAt?: string;
   createdAt: string;
+}
+
+export interface PaymentStatusResponse {
+  consultationId: string;
+  status: ConsultationStatus;
+  paymentStatus: PaymentStatus;
+}
+
+// ---------- Video ----------
+export interface VideoTokenResponse {
+  token: string;
+  roomUrl: string;
+}
+
+export interface ConsultationSummary {
+  id: string;
+  reason: string | null;
+  diagnosis: string | null;
+  prescription: string | null;
+  status: ConsultationStatus;
+  amount: number;
+  durationMinutes: number | null;
+  createdAt: string;
+  startedAt: string | null;
+  endedAt: string | null;
+  patient: { firstName: string; lastName: string };
+  doctor: { firstName: string; lastName: string; speciality: string } | null;
+}
+
+// ---------- Queue ----------
+export interface QueueStatus {
+  consultationId: string;
+  status: ConsultationStatus;
+  position: number;
+  totalInQueue: number;
+  estimatedWaitMinutes: number;
+  timeRemainingSeconds: number;
+  queuedAt?: string;
 }
 
 // ---------- Queue ----------

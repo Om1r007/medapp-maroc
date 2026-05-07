@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@daily-co/daily-js": "^0.89.1",
+    "@daily-co/daily-react": "^0.25.1",
     "@medapp/shared-types": "workspace:*",
     "@tanstack/react-query": "^5.59.20",
     "next": "^15.0.3",

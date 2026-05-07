@@ -35,8 +35,6 @@ model User {
   patient Patient?
   doctor  Doctor?
 
-  @@index([email])
-  @@index([phone])
 }
 
 // ============================================================

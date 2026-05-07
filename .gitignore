@@ -41,6 +41,9 @@ redis-data/
 # Prisma
 prisma/migrations/dev.db*
 
+# TypeScript build info
+*.tsbuildinfo
+
 # Testing
 coverage/
 .nyc_output/
