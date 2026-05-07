@@ -1,3 +1,22 @@
+# Known Issues & Edge Cases non gérés (Brique 5a)
+
+## Calendrier de disponibilité (Brique 5a)
+
+### Cron granularité 1 minute
+Le scheduler tourne toutes les minutes. Un médecin peut donc rester disponible/indisponible jusqu'à 59 secondes après la fin/début de son créneau. Acceptable pour le MVP.
+
+### Chevauchement UTC / local à minuit
+`AvailabilitySlot.startTime/endTime` sont des strings HH:mm en heure Casablanca. Pour les créneaux qui commencent à 00:00, la comparaison en minutes fonctionne correctement car on reste dans le même jour calendaire local. Pas d'ambiguïté DST (UTC+1 fixe).
+
+### Pas de validation du chevauchement sur les PATCH de slots
+Le `PATCH /availability/slots/:id` vérifie le chevauchement en excluant le slot modifié — mais si deux PATCH simultanés arrivent, un chevauchement peut passer. Acceptable MVP.
+
+### Override permanent sans durée ne se clear pas automatiquement
+Si `durationMinutes` est omis, `manualOverrideUntil = null` → le scheduler ne clear jamais l'override. Le médecin doit explicitement choisir "Mode automatique" ou `DELETE /availability/override`.
+
+### Performance du scheduler sous charge
+Le scheduler fait 2 requêtes DB par médecin (slots + exceptions). Pour 100+ médecins, envisager un batch en Phase 2. Acceptable MVP.
+
 # Known Issues & Edge Cases non gérés
 
 ## Vidéo (Brique 4)

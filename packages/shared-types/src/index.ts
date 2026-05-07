@@ -90,6 +90,8 @@ export interface DoctorProfile {
   isAvailable: boolean;
   consultationFee: number;
   createdAt: string;
+  manualOverride?: boolean | null;
+  manualOverrideUntil?: string | null;
 }
 
 export interface Doctor {
@@ -175,6 +177,39 @@ export interface QueuePosition {
   consultationId: string;
   position: number;
   estimatedWaitMinutes: number;
+}
+
+// ---------- Availability (Brique 5a) ----------
+export type ExceptionType = "BLOCKED" | "EXTRA_AVAILABILITY";
+
+export interface AvailabilitySlot {
+  id: string;
+  doctorId: string;
+  dayOfWeek: number; // 0=dim, 1=lun, ..., 6=sam
+  startTime: string; // "HH:mm" Africa/Casablanca
+  endTime: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AvailabilityException {
+  id: string;
+  doctorId: string;
+  startsAt: string;
+  endsAt: string;
+  type: ExceptionType;
+  reason?: string | null;
+  createdAt: string;
+}
+
+export interface ComputedSlot {
+  startsAt: string;
+  endsAt: string;
+}
+
+export interface SetOverrideDto {
+  isAvailable: boolean;
+  durationMinutes?: number;
 }
 
 // ---------- API Response wrappers ----------

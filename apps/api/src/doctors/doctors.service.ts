@@ -8,6 +8,7 @@ import {
 import { PrismaService } from "../prisma/prisma.service";
 import { QueueService } from "../queue/queue.service";
 import { VideoService } from "../video/video.service";
+import { AvailabilityService } from "../availability/availability.service";
 import { EndConsultationDto } from "../consultations/dto/end-consultation.dto";
 import type { DoctorProfile } from "@medapp/shared-types";
 
@@ -19,6 +20,7 @@ export class DoctorsService {
     private readonly prisma: PrismaService,
     private readonly queueService: QueueService,
     private readonly videoService: VideoService,
+    private readonly availabilityService: AvailabilityService,
   ) {}
 
   async getMe(userId: string): Promise<DoctorProfile> {
@@ -43,6 +45,8 @@ export class DoctorsService {
       isAvailable: doctor.isAvailable,
       consultationFee: Number(doctor.consultationFee),
       createdAt: doctor.createdAt.toISOString(),
+      manualOverride: doctor.manualOverride,
+      manualOverrideUntil: doctor.manualOverrideUntil?.toISOString() ?? null,
     };
   }
 
@@ -61,18 +65,16 @@ export class DoctorsService {
     const doctor = await this.prisma.doctor.findUnique({ where: { userId } });
     if (!doctor) throw new NotFoundException("Profil médecin introuvable");
 
-    if (!isAvailable) {
-      const matched = await this.prisma.consultation.findFirst({
-        where: { doctorId: doctor.id, status: "MATCHED" },
-      });
-      if (matched) await this.queueService.requeue(matched.id);
-    }
-
-    await this.prisma.doctor.update({ where: { userId }, data: { isAvailable } });
+    // Délègue au système d'override (override permanent, sans durée)
+    await this.availabilityService.setOverride(doctor.id, { isAvailable });
 
     if (!isAvailable) return { isAvailable: false };
 
-    const matchedConsultation = await this.queueService.tryMatch(doctor.id);
+    // tryMatch déjà appelé par setOverride, on relit juste le résultat MATCHED
+    const matchedConsultation = await this.prisma.consultation.findFirst({
+      where: { doctorId: doctor.id, status: "MATCHED" },
+      select: { id: true, patientId: true, reason: true, status: true },
+    });
     return { isAvailable: true, matchedConsultation };
   }
 

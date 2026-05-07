@@ -1,11 +1,11 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "../../lib/auth-store";
 import { api } from "../../lib/api";
-import type { DoctorProfile } from "@medapp/shared-types";
+import type { DoctorProfile, ComputedSlot } from "@medapp/shared-types";
 
 interface PendingConsultation {
   id: string;
@@ -16,10 +16,19 @@ interface PendingConsultation {
   patient: { firstName: string; lastName: string };
 }
 
+const OVERRIDE_OPTIONS = [
+  { label: "Disponible 30 min", isAvailable: true, durationMinutes: 30 },
+  { label: "Disponible 1h", isAvailable: true, durationMinutes: 60 },
+  { label: "Disponible jusqu'à désactivation", isAvailable: true, durationMinutes: undefined },
+  { label: "Indisponible 1h", isAvailable: false, durationMinutes: 60 },
+  { label: "Suivre mon calendrier", isAvailable: null, durationMinutes: undefined },
+] as const;
+
 export default function DoctorDashboardPage() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const queryClient = useQueryClient();
+  const [showOverrideMenu, setShowOverrideMenu] = useState(false);
 
   useEffect(() => {
     if (!user) router.push("/login");
@@ -38,23 +47,36 @@ export default function DoctorDashboardPage() {
     refetchInterval: 3000,
   });
 
-  const { mutate: setAvailability, isPending: isToggling } = useMutation({
-    mutationFn: (isAvailable: boolean) =>
-      api.patch<{ isAvailable: boolean; matchedConsultation?: PendingConsultation | null }>(
-        "/doctors/me/availability",
-        { isAvailable },
-      ),
-    onSuccess: (data) => {
-      queryClient.setQueryData(
-        ["doctor", "me"],
-        (prev: DoctorProfile) => ({ ...prev, isAvailable: data.isAvailable }),
-      );
-      if (data.matchedConsultation) {
-        queryClient.setQueryData(
-          ["doctor", "pending-consultation"],
-          data.matchedConsultation,
-        );
-      }
+  // Récupère la disponibilité calculée selon le calendrier (aujourd'hui)
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const { data: computedSlots } = useQuery({
+    queryKey: ["availability", "computed", todayStr],
+    queryFn: () => api.get<ComputedSlot[]>(`/availability/computed?date=${todayStr}`),
+    enabled: !!doctor && doctor.status === "VERIFIED",
+  });
+
+  const isCalendarAvailableNow = (() => {
+    if (!computedSlots) return null;
+    const now = new Date();
+    return computedSlots.some(
+      (s) => new Date(s.startsAt) <= now && new Date(s.endsAt) > now,
+    );
+  })();
+
+  const { mutate: setOverride, isPending: isOverriding } = useMutation({
+    mutationFn: (opts: { isAvailable: boolean; durationMinutes?: number }) =>
+      api.post("/availability/override", opts),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["doctor", "me"] });
+      setShowOverrideMenu(false);
+    },
+  });
+
+  const { mutate: clearOverride, isPending: isClearing } = useMutation({
+    mutationFn: () => api.delete("/availability/override"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["doctor", "me"] });
+      setShowOverrideMenu(false);
     },
   });
 
@@ -75,6 +97,7 @@ export default function DoctorDashboardPage() {
   }
 
   const isVerified = doctor?.status === "VERIFIED";
+  const isBusy = isOverriding || isClearing;
 
   return (
     <main className="min-h-screen bg-slate-50 p-6">
@@ -105,7 +128,7 @@ export default function DoctorDashboardPage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-lg font-bold text-brand-dark">
-                  🔔 Patient en attente
+                  Patient en attente
                 </p>
                 <p className="mt-1 text-sm text-gray-700">
                   <span className="font-medium">
@@ -131,41 +154,77 @@ export default function DoctorDashboardPage() {
           </section>
         )}
 
+        {/* Disponibilité avec override dropdown */}
         <section className="rounded-2xl bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
               <h2 className="text-lg font-semibold">Statut de disponibilité</h2>
-              <p className="text-sm text-gray-600">
-                {isVerified
-                  ? "Activez pour recevoir des patients de la file d'attente"
-                  : "Disponible une fois votre compte vérifié"}
+
+              <p className={`mt-1 text-sm font-medium ${doctor?.isAvailable ? "text-green-700" : "text-gray-500"}`}>
+                {doctor?.isAvailable ? "Disponible — vous recevez les patients" : "Indisponible"}
               </p>
+
+              {isVerified && isCalendarAvailableNow !== null && (
+                <p className="mt-1 text-xs text-gray-400">
+                  Selon votre calendrier, vous seriez{" "}
+                  <span className={isCalendarAvailableNow ? "text-green-600 font-medium" : "text-gray-500 font-medium"}>
+                    {isCalendarAvailableNow ? "disponible" : "indisponible"}
+                  </span>{" "}
+                  maintenant
+                </p>
+              )}
             </div>
-            <button
-              disabled={!isVerified || isToggling}
-              onClick={() =>
-                isVerified && doctor && setAvailability(!doctor.isAvailable)
-              }
-              className={`relative h-8 w-14 rounded-full transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                doctor?.isAvailable ? "bg-brand" : "bg-gray-300"
-              }`}
-            >
-              <span
-                className={`absolute top-1 h-6 w-6 rounded-full bg-white transition-all ${
-                  doctor?.isAvailable ? "left-7" : "left-1"
-                }`}
-              />
-            </button>
+
+            {isVerified && (
+              <div className="relative">
+                <button
+                  disabled={isBusy}
+                  onClick={() => setShowOverrideMenu((v) => !v)}
+                  className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <span
+                    className={`h-2.5 w-2.5 rounded-full ${doctor?.isAvailable ? "bg-green-500" : "bg-gray-400"}`}
+                  />
+                  Override rapide
+                  <span className="text-gray-400">▾</span>
+                </button>
+
+                {showOverrideMenu && (
+                  <div className="absolute right-0 top-full z-20 mt-1 w-64 rounded-xl border border-gray-200 bg-white shadow-lg">
+                    {OVERRIDE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.label}
+                        onClick={() => {
+                          if (opt.isAvailable === null) {
+                            clearOverride();
+                          } else {
+                            setOverride({
+                              isAvailable: opt.isAvailable,
+                              durationMinutes: opt.durationMinutes,
+                            });
+                          }
+                        }}
+                        className="block w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 first:rounded-t-xl last:rounded-b-xl"
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          <p
-            className={`mt-4 text-sm font-medium ${
-              doctor?.isAvailable ? "text-green-700" : "text-gray-500"
-            }`}
-          >
-            {doctor?.isAvailable
-              ? "✓ Disponible — vous recevez les patients"
-              : "Indisponible"}
-          </p>
+
+          {isVerified && (
+            <div className="mt-4 border-t border-gray-100 pt-4">
+              <a
+                href="/calendar"
+                className="text-sm text-brand hover:underline"
+              >
+                Modifier mon calendrier de disponibilité →
+              </a>
+            </div>
+          )}
         </section>
 
         <section className="grid gap-4 sm:grid-cols-3">
@@ -174,17 +233,15 @@ export default function DoctorDashboardPage() {
           <Stat label="Revenus du mois (MAD)" value="0" />
         </section>
 
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Prochaines fonctionnalités</h2>
-          <ul className="mt-3 space-y-2 text-sm text-gray-600">
-            <li>• Salle de consultation vidéo (Daily.co)</li>
-            <li>• Calendrier de disponibilité</li>
-            <li>• Comptes-rendus & ordonnances</li>
-            <li>• Facturation mensuelle</li>
-          </ul>
-        </section>
-
       </div>
+
+      {/* Ferme le menu en cliquant ailleurs */}
+      {showOverrideMenu && (
+        <div
+          className="fixed inset-0 z-10"
+          onClick={() => setShowOverrideMenu(false)}
+        />
+      )}
     </main>
   );
 }
