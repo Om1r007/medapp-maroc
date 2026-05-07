@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthStore } from "../../../lib/auth-store";
-import { api, ApiError } from "../../../lib/api";
+import { useAuthStore } from "@/lib/auth-store";
+import { api, ApiError } from "@/lib/api";
 import type { Consultation } from "@medapp/shared-types";
 
 export default function NewConsultationPage() {

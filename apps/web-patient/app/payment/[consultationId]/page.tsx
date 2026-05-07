@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { api, ApiError } from "../../../lib/api";
+import { api, ApiError } from "@/lib/api";
 import type { Consultation } from "@medapp/shared-types";
 
 export default function PaymentPage() {

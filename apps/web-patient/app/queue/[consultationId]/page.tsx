@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { api, ApiError } from "../../../lib/api";
+import { api, ApiError } from "@/lib/api";
 import type { QueueStatus } from "@medapp/shared-types";
 
 function formatTime(seconds: number): string {

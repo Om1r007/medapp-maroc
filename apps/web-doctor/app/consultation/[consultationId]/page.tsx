@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { api, ApiError } from "../../lib/api";
-import { VideoCall } from "../../components/VideoCall";
+import { api, ApiError } from "@/lib/api";
+import { VideoCall } from "@/components/VideoCall";
 import type { VideoTokenResponse, ConsultationSummary } from "@medapp/shared-types";
 
 export default function DoctorConsultationPage() {

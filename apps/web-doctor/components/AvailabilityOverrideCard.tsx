@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api } from "../lib/api";
+import { api } from "@/lib/api";
 
 interface Doctor {
   isAvailable: boolean;

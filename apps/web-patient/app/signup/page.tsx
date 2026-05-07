@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { api, ApiError } from "../../lib/api";
-import { useAuthStore } from "../../lib/auth-store";
+import { api, ApiError } from "@/lib/api";
+import { useAuthStore } from "@/lib/auth-store";
 import type { AuthResponse, SignupPatientDto } from "@medapp/shared-types";
 
 export default function SignupPage() {

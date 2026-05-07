@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api } from "../lib/api";
+import { api } from "@/lib/api";
 import type { AvailabilitySlot } from "@medapp/shared-types";
 
 // Jours affichés du lundi (1) au dimanche (0), ordre marocain

@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { useAuthStore } from "../../lib/auth-store";
-import { api } from "../../lib/api";
+import { useAuthStore } from "@/lib/auth-store";
+import { api } from "@/lib/api";
 import type { Consultation } from "@medapp/shared-types";
 
 const STATUS_LABELS: Record<Consultation["status"], string> = {

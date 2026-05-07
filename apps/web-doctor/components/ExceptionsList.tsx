@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api } from "../lib/api";
+import { api } from "@/lib/api";
 import type { AvailabilityException, ExceptionType } from "@medapp/shared-types";
 
 const TYPE_LABELS: Record<ExceptionType, string> = {

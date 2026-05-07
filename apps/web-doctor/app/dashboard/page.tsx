@@ -3,8 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthStore } from "../../lib/auth-store";
-import { api } from "../../lib/api";
+import { useAuthStore } from "@/lib/auth-store";
+import { api } from "@/lib/api";
 import type { DoctorProfile, ComputedSlot } from "@medapp/shared-types";
 
 interface PendingConsultation {
