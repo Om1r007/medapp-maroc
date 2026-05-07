@@ -24,6 +24,14 @@ export class QueueService {
 
   async enqueue(consultationId: string): Promise<void> {
     await this.scheduleTimeout(consultationId);
+    // Tente un match immédiat si un médecin est déjà disponible
+    const availableDoctor = await this.prisma.doctor.findFirst({
+      where: { status: "VERIFIED", isAvailable: true },
+      select: { id: true },
+    });
+    if (availableDoctor) {
+      await this.tryMatch(availableDoctor.id);
+    }
   }
 
   async getPosition(

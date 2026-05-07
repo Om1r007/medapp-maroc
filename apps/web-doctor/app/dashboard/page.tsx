@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuthStore } from "@/lib/auth-store";
 import { api } from "@/lib/api";
 import type { DoctorProfile, ComputedSlot } from "@medapp/shared-types";
@@ -217,12 +218,12 @@ export default function DoctorDashboardPage() {
 
           {isVerified && (
             <div className="mt-4 border-t border-gray-100 pt-4">
-              <a
+              <Link
                 href="/calendar"
                 className="text-sm text-brand hover:underline"
               >
                 Modifier mon calendrier de disponibilité →
-              </a>
+              </Link>
             </div>
           )}
         </section>
