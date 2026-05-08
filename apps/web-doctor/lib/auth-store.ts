@@ -29,6 +29,12 @@ export const useAuthStore = create<AuthState>()(
         set({ user, accessToken, refreshToken });
       },
       logout: () => {
+        import("@daily-co/daily-js").then((mod) => {
+          try {
+            const existing = mod.default.getCallInstance();
+            if (existing) existing.destroy().catch(() => {});
+          } catch {}
+        }).catch(() => {});
         if (typeof window !== "undefined") {
           localStorage.removeItem("doctorAccessToken");
         }

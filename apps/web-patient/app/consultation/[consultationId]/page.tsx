@@ -42,6 +42,16 @@ export default function PatientConsultationPage() {
     }
   }, [consultation?.status, consultationId, redirected, router, qc]);
 
+  // Destroy any lingering Daily instance when leaving the page
+  useEffect(() => {
+    return () => {
+      import("@daily-co/daily-js").then((mod) => {
+        const existing = mod.default.getCallInstance();
+        if (existing) existing.destroy().catch(() => {});
+      }).catch(() => {});
+    };
+  }, []);
+
   if (!user) return null;
 
   // Waiting for video room

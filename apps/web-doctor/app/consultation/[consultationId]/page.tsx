@@ -42,6 +42,16 @@ export default function DoctorConsultationPage() {
     }
   }, [summary?.status, router, qc]);
 
+  // Destroy any lingering Daily instance when leaving the page
+  useEffect(() => {
+    return () => {
+      import("@daily-co/daily-js").then((mod) => {
+        const existing = mod.default.getCallInstance();
+        if (existing) existing.destroy().catch(() => {});
+      }).catch(() => {});
+    };
+  }, []);
+
   const { mutate: endConsultation, isPending: isEnding } = useMutation({
     mutationFn: () =>
       api.post(`/doctors/me/end-consultation/${consultationId}`, {
