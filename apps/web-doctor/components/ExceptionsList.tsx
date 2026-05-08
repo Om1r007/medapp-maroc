@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/error-message";
 import type { AvailabilityException, ExceptionType } from "@medapp/shared-types";
 
 const TYPE_LABELS: Record<ExceptionType, string> = {
@@ -57,8 +58,7 @@ export function ExceptionsList() {
       setForm({ startsAt: "", endsAt: "", type: "BLOCKED", reason: "" });
     },
     onError: (err: unknown) => {
-      const msg = (err as { payload?: { message?: string } })?.payload?.message;
-      setFormError(Array.isArray(msg) ? msg[0] : (msg ?? "Erreur lors de la création"));
+      setFormError(extractErrorMessage(err, "Erreur lors de la création"));
     },
   });
 

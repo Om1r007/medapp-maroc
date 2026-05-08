@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRequireAuth } from "@/lib/use-require-auth";
-import { api, ApiError } from "@/lib/api";
+import { api } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/error-message";
 import type { QueueStatus } from "@medapp/shared-types";
 
 function formatTime(seconds: number): string {
@@ -42,10 +43,7 @@ export default function QueuePage() {
     mutationFn: () => api.delete(`/consultations/${consultationId}`),
     onSuccess: () => router.push("/dashboard"),
     onError: (err) => {
-      if (err instanceof ApiError) {
-        const p = err.payload as { message?: string } | null;
-        setCancelError(p?.message ?? "Erreur lors de l'annulation");
-      }
+      setCancelError(extractErrorMessage(err, "Erreur lors de l'annulation"));
     },
   });
 

@@ -108,7 +108,7 @@ export class ConsultationsService {
 
   async findMine(userId: string): Promise<Consultation[]> {
     const patient = await this.prisma.patient.findUnique({ where: { userId } });
-    if (!patient) throw new NotFoundException("Patient introuvable");
+    if (!patient) return [];
 
     const consultations = await this.prisma.consultation.findMany({
       where: { patientId: patient.id },

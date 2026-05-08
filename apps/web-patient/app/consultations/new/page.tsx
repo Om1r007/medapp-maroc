@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRequireAuth } from "@/lib/use-require-auth";
-import { api, ApiError } from "@/lib/api";
+import { api } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/error-message";
 import type { Consultation } from "@medapp/shared-types";
 
 export default function NewConsultationPage() {
@@ -26,12 +27,7 @@ export default function NewConsultationPage() {
       });
       router.push(`/payment/${consultation.id}`);
     } catch (err) {
-      if (err instanceof ApiError) {
-        const payload = err.payload as { message?: string } | null;
-        setError(payload?.message ?? "Une erreur est survenue");
-      } else {
-        setError("Une erreur est survenue");
-      }
+      setError(extractErrorMessage(err));
       setLoading(false);
     }
   }
