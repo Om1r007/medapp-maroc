@@ -16,6 +16,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { toZonedTime } from "date-fns-tz";
@@ -41,6 +42,8 @@ function localHHMM(zonedDate: Date): string {
 
 @Injectable()
 export class AvailabilityService {
+  private readonly logger = new Logger(AvailabilityService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly queueService: QueueService,
@@ -155,7 +158,13 @@ export class AvailabilityService {
 
     // Si on force disponible → tenter un match
     if (dto.isAvailable) {
-      await this.queueService.tryMatch(doctorId);
+      this.logger.log(`setOverride: doctorId=${doctorId} → appel tryMatch`);
+      const matched = await this.queueService.tryMatch(doctorId);
+      if (matched) {
+        this.logger.log(`setOverride: match réussi → consultationId=${matched.id}`);
+      } else {
+        this.logger.warn(`setOverride: tryMatch returned null (lock Redis pris ou aucun patient en file) — le scheduler retentera dans ≤1 min`);
+      }
     }
   }
 

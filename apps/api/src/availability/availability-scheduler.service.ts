@@ -14,6 +14,7 @@ import { Cron } from "@nestjs/schedule";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../prisma/prisma.service";
 import { AvailabilityService } from "./availability.service";
+import { QueueService } from "../queue/queue.service";
 
 @Injectable()
 export class AvailabilitySchedulerService {
@@ -22,6 +23,7 @@ export class AvailabilitySchedulerService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly availability: AvailabilityService,
+    private readonly queue: QueueService,
     private readonly config: ConfigService,
   ) {}
 
@@ -56,7 +58,13 @@ export class AvailabilitySchedulerService {
             doctor.manualOverrideUntil === null ||
             doctor.manualOverrideUntil > now
           ) {
-            // Override encore valide → ne rien toucher
+            // Override encore valide → ne rien toucher au calendrier.
+            // Si le médecin est disponible, tenter un match (rattrapage : le
+            // tryMatch initial de setOverride peut avoir échoué si le lock Redis
+            // était pris ou si une erreur transitoire s'est produite).
+            if (doctor.isAvailable) {
+              await this.queue.tryMatch(doctor.id);
+            }
             continue;
           }
 
@@ -74,6 +82,9 @@ export class AvailabilitySchedulerService {
         if (expected !== doctor.isAvailable) {
           await this.availability.applyAvailability(doctor.id, expected, doctor.isAvailable);
           updated++;
+        } else if (expected && doctor.isAvailable) {
+          // Disponibilité inchangée mais le médecin est dispo → rattrapage aussi
+          await this.queue.tryMatch(doctor.id);
         }
       } catch (err) {
         this.logger.error(`Scheduler error for doctor ${doctor.id}: ${err}`);
