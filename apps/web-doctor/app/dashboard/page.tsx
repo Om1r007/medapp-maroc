@@ -37,6 +37,7 @@ export default function DoctorDashboardPage() {
     queryKey: ["doctor", "me"],
     queryFn: () => api.get<DoctorProfile>("/doctors/me"),
     enabled: !!user,
+    refetchInterval: 5000,
   });
 
   const { data: pendingConsultation } = useQuery({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRequireAuth } from "@/lib/use-require-auth";
@@ -31,7 +31,16 @@ export default function DoctorConsultationPage() {
     queryFn: () =>
       api.get<ConsultationSummary>(`/consultations/${consultationId}/summary`),
     enabled: !!consultationId,
+    refetchInterval: 3000,
   });
+
+  // Détecte l'auto-clôture par le scheduler (1h timeout)
+  useEffect(() => {
+    if (summary?.status === "COMPLETED") {
+      qc.invalidateQueries();
+      router.push("/dashboard");
+    }
+  }, [summary?.status, router, qc]);
 
   const { mutate: endConsultation, isPending: isEnding } = useMutation({
     mutationFn: () =>

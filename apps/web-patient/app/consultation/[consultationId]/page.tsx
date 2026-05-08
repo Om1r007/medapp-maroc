@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRequireAuth } from "@/lib/use-require-auth";
@@ -13,8 +13,9 @@ export default function PatientConsultationPage() {
   const { consultationId } = useParams<{ consultationId: string }>();
   const router = useRouter();
   const qc = useQueryClient();
+  const [redirected, setRedirected] = useState(false);
 
-  // Poll consultation until videoRoomUrl is available, then keep polling for COMPLETED
+  // Poll consultation status every 3s
   const { data: consultation } = useQuery({
     queryKey: ["consultation", consultationId],
     queryFn: () => api.get<Consultation>(`/consultations/${consultationId}`),
@@ -31,11 +32,15 @@ export default function PatientConsultationPage() {
   });
 
   useEffect(() => {
-    if (consultation?.status === "COMPLETED" || consultation?.status === "CANCELLED") {
+    if (
+      (consultation?.status === "COMPLETED" || consultation?.status === "CANCELLED") &&
+      !redirected
+    ) {
+      setRedirected(true);
       qc.invalidateQueries();
       router.push(`/consultations/${consultationId}/summary`);
     }
-  }, [consultation?.status, consultationId, router, qc]);
+  }, [consultation?.status, consultationId, redirected, router, qc]);
 
   if (!user) return null;
 

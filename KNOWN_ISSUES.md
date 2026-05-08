@@ -17,6 +17,20 @@ Add a post-close diagnosis flow: after detecting `autoClosedByTimeout = true` + 
 
 ---
 
+## Polling-based sync — limite à ~1000 utilisateurs simultanés
+
+**Severity**: Low (acceptable pour MVP)  
+**Affects**: Scalabilité de la synchronisation temps réel
+
+**Description**  
+La synchronisation UI/backend repose sur du polling agressif (3–5 s par query active). Avec 100 médecins connectés faisant chacun 2–3 queries critiques, l'API reçoit environ **60–90 requêtes/sec** au repos — largement dans les capacités de NestJS + PostgreSQL pour le MVP.  
+Au-delà de ~1 000 utilisateurs simultanés, ce modèle devient coûteux.
+
+**Planned fix (non urgent)**  
+Migrer les queries temps réel (`pending-consultation`, `queue-status`, `consultation`) vers **Socket.IO** (WebSocket) pour du push serveur → client. Réduirait la charge à near-zero requêtes de polling. À planifier en V2.
+
+---
+
 ## Payment provider limited to mock in dev
 
 **Severity**: Low (expected in dev)  
