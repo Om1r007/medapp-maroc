@@ -18,7 +18,7 @@ async function request<T>(
 ): Promise<T> {
   const token =
     typeof window !== "undefined"
-      ? localStorage.getItem("accessToken")
+      ? localStorage.getItem("patientAccessToken")
       : null;
 
   const res = await fetch(`${API_URL}/api${path}`, {

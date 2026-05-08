@@ -24,6 +24,10 @@ export default function LoginPage() {
         email,
         password,
       });
+      if (data.user.role !== "PATIENT") {
+        setError("Cet espace est réservé aux patients. Connectez-vous via l'espace médecin.");
+        return;
+      }
       setAuth(data);
       router.push("/dashboard");
     } catch (err) {

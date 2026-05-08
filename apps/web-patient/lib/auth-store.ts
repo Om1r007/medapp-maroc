@@ -24,17 +24,17 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       setAuth: ({ user, accessToken, refreshToken }) => {
         if (typeof window !== "undefined") {
-          localStorage.setItem("accessToken", accessToken);
+          localStorage.setItem("patientAccessToken", accessToken);
         }
         set({ user, accessToken, refreshToken });
       },
       logout: () => {
         if (typeof window !== "undefined") {
-          localStorage.removeItem("accessToken");
+          localStorage.removeItem("patientAccessToken");
         }
         set({ user: null, accessToken: null, refreshToken: null });
       },
     }),
-    { name: "medapp-auth" },
+    { name: "medapp-patient-auth" },
   ),
 );
