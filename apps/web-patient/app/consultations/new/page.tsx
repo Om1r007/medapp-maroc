@@ -2,21 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/lib/auth-store";
+import { useRequireAuth } from "@/lib/use-require-auth";
 import { api, ApiError } from "@/lib/api";
 import type { Consultation } from "@medapp/shared-types";
 
 export default function NewConsultationPage() {
+  const user = useRequireAuth();
   const router = useRouter();
-  const { user } = useAuthStore();
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!user) {
-    router.push("/login");
-    return null;
-  }
+  if (!user) return null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

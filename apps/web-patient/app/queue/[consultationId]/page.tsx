@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useRequireAuth } from "@/lib/use-require-auth";
 import { api, ApiError } from "@/lib/api";
 import type { QueueStatus } from "@medapp/shared-types";
 
@@ -13,6 +14,7 @@ function formatTime(seconds: number): string {
 }
 
 export default function QueuePage() {
+  const user = useRequireAuth();
   const { consultationId } = useParams<{ consultationId: string }>();
   const router = useRouter();
   const [showRefundModal, setShowRefundModal] = useState(false);
@@ -46,6 +48,8 @@ export default function QueuePage() {
       }
     },
   });
+
+  if (!user) return null;
 
   if (showRefundModal) {
     return (

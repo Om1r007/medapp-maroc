@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useRequireAuth } from "@/lib/use-require-auth";
 import { api } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/error-message";
 import { VideoCall } from "@/components/VideoCall";
 import type { VideoTokenResponse, ConsultationSummary } from "@medapp/shared-types";
 
 export default function DoctorConsultationPage() {
+  const user = useRequireAuth();
   const { consultationId } = useParams<{ consultationId: string }>();
   const router = useRouter();
   const [diagnosis, setDiagnosis] = useState("");
@@ -43,8 +45,9 @@ export default function DoctorConsultationPage() {
     },
   });
 
-  // Calc patient age from dateOfBirth if available
   const patient = summary?.patient;
+
+  if (!user) return null;
 
   if (tokenLoading) {
     return (

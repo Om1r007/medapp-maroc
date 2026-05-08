@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { useRequireAuth } from "@/lib/use-require-auth";
 import { api } from "@/lib/api";
 import { VideoCall } from "@/components/VideoCall";
 import type { Consultation, VideoTokenResponse } from "@medapp/shared-types";
 
 export default function PatientConsultationPage() {
+  const user = useRequireAuth();
   const { consultationId } = useParams<{ consultationId: string }>();
   const router = useRouter();
   const [showEndModal, setShowEndModal] = useState(false);
@@ -38,6 +40,8 @@ export default function PatientConsultationPage() {
       setShowEndModal(true);
     }
   }, [consultation?.status]);
+
+  if (!user) return null;
 
   if (showEndModal) {
     return (

@@ -2,10 +2,12 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { useRequireAuth } from "@/lib/use-require-auth";
 import { api } from "@/lib/api";
 import type { ConsultationSummary } from "@medapp/shared-types";
 
 export default function ConsultationSummaryPage() {
+  const user = useRequireAuth();
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
@@ -13,6 +15,8 @@ export default function ConsultationSummaryPage() {
     queryKey: ["summary", id],
     queryFn: () => api.get<ConsultationSummary>(`/consultations/${id}/summary`),
   });
+
+  if (!user) return null;
 
   if (isLoading) {
     return (

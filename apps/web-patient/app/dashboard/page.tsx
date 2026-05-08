@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/lib/auth-store";
+import { useRequireAuth } from "@/lib/use-require-auth";
 import { api } from "@/lib/api";
 import type { Consultation } from "@medapp/shared-types";
 
@@ -45,12 +45,9 @@ function getActiveRedirect(status: ActiveStatus, id: string): string {
 }
 
 export default function DashboardPage() {
+  const user = useRequireAuth();
   const router = useRouter();
-  const { user, logout } = useAuthStore();
-
-  useEffect(() => {
-    if (!user) router.push("/login");
-  }, [user, router]);
+  const { logout } = useAuthStore();
 
   const { data: consultations } = useQuery({
     queryKey: ["consultations-me"],

@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { useAuthStore } from "@/lib/auth-store";
+import { useRequireAuth } from "@/lib/use-require-auth";
 import { api } from "@/lib/api";
 import { WeeklyScheduleEditor } from "@/components/WeeklyScheduleEditor";
 import { ExceptionsList } from "@/components/ExceptionsList";
@@ -11,12 +10,8 @@ import { AvailabilityOverrideCard } from "@/components/AvailabilityOverrideCard"
 import type { DoctorProfile } from "@medapp/shared-types";
 
 export default function CalendarPage() {
+  const user = useRequireAuth();
   const router = useRouter();
-  const { user } = useAuthStore();
-
-  useEffect(() => {
-    if (!user) router.push("/login");
-  }, [user, router]);
 
   const { data: doctor, isLoading } = useQuery({
     queryKey: ["doctor", "me"],

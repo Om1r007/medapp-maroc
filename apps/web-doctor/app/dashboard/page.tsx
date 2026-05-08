@@ -1,10 +1,11 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/lib/auth-store";
+import { useRequireAuth } from "@/lib/use-require-auth";
 import { api } from "@/lib/api";
 import type { DoctorProfile, ComputedSlot } from "@medapp/shared-types";
 
@@ -26,14 +27,11 @@ const OVERRIDE_OPTIONS = [
 ] as const;
 
 export default function DoctorDashboardPage() {
+  const user = useRequireAuth();
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { logout } = useAuthStore();
   const queryClient = useQueryClient();
   const [showOverrideMenu, setShowOverrideMenu] = useState(false);
-
-  useEffect(() => {
-    if (!user) router.push("/login");
-  }, [user, router]);
 
   const { data: doctor, isLoading } = useQuery({
     queryKey: ["doctor", "me"],

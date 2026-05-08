@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { useRequireAuth } from "@/lib/use-require-auth";
 import { api, ApiError } from "@/lib/api";
 import type { Consultation } from "@medapp/shared-types";
 
 export default function PaymentPage() {
+  const user = useRequireAuth();
   const { consultationId } = useParams<{ consultationId: string }>();
   const router = useRouter();
   const [loading, setLoading] = useState<"success" | "failure" | null>(null);
@@ -16,6 +18,8 @@ export default function PaymentPage() {
     queryKey: ["consultation", consultationId],
     queryFn: () => api.get<Consultation>(`/consultations/${consultationId}`),
   });
+
+  if (!user) return null;
 
   async function handleSimulate(type: "success" | "failure") {
     setLoading(type);
