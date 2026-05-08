@@ -63,13 +63,14 @@ export class AvailabilityController {
   }
 
   @Delete("slots/:id")
-  @HttpCode(204)
+  @HttpCode(200)
   async deleteSlot(
     @Param("id") id: string,
     @Request() req: { user: { id: string } },
   ) {
     const doctorId = await this.getDoctorId(req.user.id);
     await this.availability.deleteSlot(id, doctorId);
+    return { success: true };
   }
 
   // ── Exceptions ponctuelles ─────────────────────────────────
@@ -94,13 +95,14 @@ export class AvailabilityController {
   }
 
   @Delete("exceptions/:id")
-  @HttpCode(204)
+  @HttpCode(200)
   async deleteException(
     @Param("id") id: string,
     @Request() req: { user: { id: string } },
   ) {
     const doctorId = await this.getDoctorId(req.user.id);
     await this.availability.deleteException(id, doctorId);
+    return { success: true };
   }
 
   // ── Override manuel ────────────────────────────────────────

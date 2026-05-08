@@ -1,5 +1,3 @@
-// Mini client API typé. Sera enrichi au fur et à mesure.
-
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -30,18 +28,36 @@ async function request<T>(
     },
   });
 
-  if (!res.ok) {
-    let payload: unknown = null;
+  // Read body as text first — may be empty on 204 or null responses
+  const text = await res.text();
+
+  let payload: unknown = null;
+  if (text) {
     try {
-      payload = await res.json();
+      payload = JSON.parse(text);
     } catch {
-      // ignore
+      throw new ApiError(res.status, { message: text.slice(0, 200) });
     }
+  }
+
+  // Token expired — clear storage so useRequireAuth redirects to login
+  if (res.status === 401) {
+    if (typeof window !== "undefined") {
+      localStorage.clear();
+    }
+    throw new ApiError(401, payload);
+  }
+
+  if (!res.ok) {
     throw new ApiError(res.status, payload);
   }
 
-  if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  // 204 No Content or empty body → return null
+  if (res.status === 204 || !text) {
+    return null as T;
+  }
+
+  return payload as T;
 }
 
 export const api = {
