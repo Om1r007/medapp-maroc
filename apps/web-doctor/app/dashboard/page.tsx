@@ -45,6 +45,7 @@ export default function DoctorDashboardPage() {
     enabled: !!doctor && doctor.status === "VERIFIED",
     refetchInterval: 3000,
     refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     staleTime: 0,
   });
 
@@ -87,6 +88,7 @@ export default function DoctorDashboardPage() {
     mutationFn: (consultationId: string) =>
       api.post(`/doctors/me/start-consultation/${consultationId}`, {}),
     onSuccess: (_data, consultationId) => {
+      queryClient.invalidateQueries({ queryKey: ["doctor", "pending-consultation"] });
       router.push(`/consultation/${consultationId}`);
     },
   });

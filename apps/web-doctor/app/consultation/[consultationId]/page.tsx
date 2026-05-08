@@ -40,8 +40,9 @@ export default function DoctorConsultationPage() {
         prescription: prescription.trim() || undefined,
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["doctor", "pending-consultation"] });
-      qc.invalidateQueries({ queryKey: ["doctor", "me"] });
+      qc.invalidateQueries({ queryKey: ["doctor"] });
+      qc.invalidateQueries({ queryKey: ["consultation"] });
+      qc.invalidateQueries({ queryKey: ["consultations"] });
       router.push("/dashboard");
     },
     onError: (err) => {

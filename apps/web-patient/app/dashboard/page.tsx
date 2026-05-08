@@ -59,6 +59,10 @@ export default function DashboardPage() {
     queryKey: ["consultation-active"],
     queryFn: () => api.get<ActiveConsultation | null>("/consultations/me/active"),
     enabled: !!user,
+    refetchInterval: 5000,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   });
 
   if (!user) return null;
