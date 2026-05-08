@@ -44,7 +44,10 @@ export default function DoctorDashboardPage() {
   const { data: pendingConsultation } = useQuery({
     queryKey: ["doctor", "pending-consultation"],
     queryFn: () => api.get<PendingConsultation | null>("/doctors/me/pending-consultation"),
-    enabled: !!doctor?.isAvailable,
+    // Toujours actif pour un médecin vérifié : le match peut arriver à tout moment
+    // (override, enqueue immédiat, scheduler). enabled:isAvailable créait un délai
+    // entre le moment où le backend matche et le moment où le polling démarre.
+    enabled: !!doctor && doctor.status === "VERIFIED",
     refetchInterval: 3000,
   });
 
@@ -69,6 +72,7 @@ export default function DoctorDashboardPage() {
       api.post("/availability/override", opts),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["doctor", "me"] });
+      queryClient.invalidateQueries({ queryKey: ["doctor", "pending-consultation"] });
       setShowOverrideMenu(false);
     },
   });
@@ -77,6 +81,7 @@ export default function DoctorDashboardPage() {
     mutationFn: () => api.delete("/availability/override"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["doctor", "me"] });
+      queryClient.invalidateQueries({ queryKey: ["doctor", "pending-consultation"] });
       setShowOverrideMenu(false);
     },
   });

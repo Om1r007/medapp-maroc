@@ -13,14 +13,21 @@ export function VideoCall({ roomUrl, token, userName, onLeave }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const frameRef = useRef<any>(null);
+  const onLeaveRef = useRef(onLeave);
+  useEffect(() => { onLeaveRef.current = onLeave; });
 
   useEffect(() => {
-    if (!containerRef.current || frameRef.current) return;
+    if (!containerRef.current || !roomUrl || !token) return;
 
-    let frame: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let frame: any = null;
+    let cancelled = false;
 
     import("@daily-co/daily-js").then((mod) => {
-      if (!containerRef.current) return;
+      if (cancelled || !containerRef.current) return;
+
+      // Détruire toute frame existante (sécurité React StrictMode double-mount)
+      try { mod.default.getCallInstance()?.destroy(); } catch {}
 
       frame = mod.default.createFrame(containerRef.current, {
         showLeaveButton: true,
@@ -37,16 +44,15 @@ export function VideoCall({ roomUrl, token, userName, onLeave }: Props) {
 
       frameRef.current = frame;
       frame.join({ url: roomUrl, token, userName });
-      frame.on("left-meeting", onLeave);
+      frame.on("left-meeting", () => onLeaveRef.current());
     });
 
     return () => {
+      cancelled = true;
       frame?.destroy();
       frameRef.current = null;
     };
-  // roomUrl/token/userName won't change for a given call — intentional
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [roomUrl, token, userName]);
 
   return (
     <div

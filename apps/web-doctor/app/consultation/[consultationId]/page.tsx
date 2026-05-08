@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { api, ApiError } from "@/lib/api";
+import { api } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/error-message";
 import { VideoCall } from "@/components/VideoCall";
 import type { VideoTokenResponse, ConsultationSummary } from "@medapp/shared-types";
 
@@ -37,10 +38,7 @@ export default function DoctorConsultationPage() {
       }),
     onSuccess: () => router.push("/dashboard"),
     onError: (err) => {
-      if (err instanceof ApiError) {
-        const p = err.payload as { message?: string } | null;
-        setEndError(p?.message ?? "Erreur lors de la clôture");
-      }
+      setEndError(extractErrorMessage(err, "Erreur lors de la clôture"));
       setShowConfirm(false);
     },
   });
