@@ -183,10 +183,12 @@ export class DoctorsService {
       }
     }
 
-    await this.prisma.doctor.update({
-      where: { id: doctor.id },
-      data: { isAvailable: false },
-    });
+    // Tenter de matcher le prochain patient en file immédiatement
+    try {
+      await this.queueService.tryMatch(doctor.id);
+    } catch (err) {
+      this.logger.warn(`tryMatch after endConsultation failed: ${err}`);
+    }
 
     return updated;
   }

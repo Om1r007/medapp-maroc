@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRequireAuth } from "@/lib/use-require-auth";
 import { api } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/error-message";
@@ -13,6 +13,7 @@ export default function DoctorConsultationPage() {
   const user = useRequireAuth();
   const { consultationId } = useParams<{ consultationId: string }>();
   const router = useRouter();
+  const qc = useQueryClient();
   const [diagnosis, setDiagnosis] = useState("");
   const [prescription, setPrescription] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
@@ -38,7 +39,11 @@ export default function DoctorConsultationPage() {
         diagnosis,
         prescription: prescription.trim() || undefined,
       }),
-    onSuccess: () => router.push("/dashboard"),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["doctor", "pending-consultation"] });
+      qc.invalidateQueries({ queryKey: ["doctor", "me"] });
+      router.push("/dashboard");
+    },
     onError: (err) => {
       setEndError(extractErrorMessage(err, "Erreur lors de la clôture"));
       setShowConfirm(false);

@@ -42,11 +42,10 @@ export default function DoctorDashboardPage() {
   const { data: pendingConsultation } = useQuery({
     queryKey: ["doctor", "pending-consultation"],
     queryFn: () => api.get<PendingConsultation | null>("/doctors/me/pending-consultation"),
-    // Toujours actif pour un médecin vérifié : le match peut arriver à tout moment
-    // (override, enqueue immédiat, scheduler). enabled:isAvailable créait un délai
-    // entre le moment où le backend matche et le moment où le polling démarre.
     enabled: !!doctor && doctor.status === "VERIFIED",
     refetchInterval: 3000,
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 
   // Récupère la disponibilité calculée selon le calendrier (aujourd'hui)
