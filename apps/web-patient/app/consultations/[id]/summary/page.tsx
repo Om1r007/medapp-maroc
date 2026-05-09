@@ -1,20 +1,70 @@
 "use client";
 
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useRequireAuth } from "@/lib/use-require-auth";
 import { api } from "@/lib/api";
 import type { ConsultationSummary } from "@medapp/shared-types";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+
+interface InvoiceInfo {
+  id: string;
+  number: string;
+  amountTtc: number;
+  issuedAt: string;
+  status: string;
+}
+
+async function downloadPdf(invoiceId: string, invoiceNumber: string) {
+  const token = localStorage.getItem("patientAccessToken");
+  const res = await fetch(`${API_URL}/api/invoices/${invoiceId}/download`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("Download failed");
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${invoiceNumber}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 export default function ConsultationSummaryPage() {
   const user = useRequireAuth();
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   const { data: summary, isLoading } = useQuery({
     queryKey: ["summary", id],
     queryFn: () => api.get<ConsultationSummary>(`/consultations/${id}/summary`),
   });
+
+  const { data: invoice } = useQuery({
+    queryKey: ["invoice", "consultation", id],
+    queryFn: () => api.get<InvoiceInfo | null>(`/invoices/consultation/${id}`),
+    enabled: !!summary && summary.status === "COMPLETED",
+    retry: false,
+  });
+
+  async function handleDownload() {
+    if (!invoice) return;
+    setDownloading(true);
+    setDownloadError(null);
+    try {
+      await downloadPdf(invoice.id, invoice.number);
+    } catch {
+      setDownloadError("Impossible de télécharger le reçu. Réessayez.");
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   if (!user) return null;
 
@@ -124,14 +174,28 @@ export default function ConsultationSummaryPage() {
             </div>
           </dl>
 
-          <div className="mt-8 flex gap-3">
-            <button
-              disabled
-              className="flex-1 rounded-lg border border-gray-300 px-5 py-2.5 text-sm text-gray-400 cursor-not-allowed"
-              title="Disponible en V2"
-            >
-              Télécharger le compte-rendu (PDF) — Bientôt disponible
-            </button>
+          <div className="mt-8 space-y-2">
+            {invoice ? (
+              <>
+                <button
+                  onClick={handleDownload}
+                  disabled={downloading}
+                  className="w-full rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-white hover:bg-brand/90 disabled:opacity-60"
+                >
+                  {downloading ? "Téléchargement…" : `Télécharger le reçu ${invoice.number} (PDF)`}
+                </button>
+                {downloadError && (
+                  <p className="text-center text-xs text-red-600">{downloadError}</p>
+                )}
+              </>
+            ) : (
+              <button
+                disabled
+                className="w-full rounded-lg border border-gray-200 px-5 py-2.5 text-sm text-gray-400 cursor-not-allowed"
+              >
+                Reçu en cours de génération…
+              </button>
+            )}
           </div>
         </div>
       </div>

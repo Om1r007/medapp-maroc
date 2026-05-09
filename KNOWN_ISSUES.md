@@ -31,6 +31,27 @@ Migrer les queries temps réel (`pending-consultation`, `queue-status`, `consult
 
 ---
 
+## Brique 5c — Facturation PDF : limitations connues
+
+**Sévérité** : Faibles (acceptable pour MVP)
+
+### Stockage local des PDFs
+Les PDFs sont stockés dans `apps/api/storage/invoices/{year}/{month}/`. À migrer vers S3 / Wasabi / MT Cloud avant la mise en production pour garantir scalabilité et backup.
+
+### Identité Medapp dans les variables d'environnement
+Les champs ICE, IF, RC dans `.env` contiennent des valeurs fictives pour le développement. Remplir avec les vraies valeurs officielles (enregistrées à la DGI et au RC) avant toute utilisation en production. Une facture avec de faux identifiants fiscaux n'a pas de valeur légale.
+
+### Redis KEYS — à migrer vers SCAN avant prod
+La numérotation séquentielle des factures utilise `redis.del(lockKey)` sur une clé simple. Si on avait besoin d'invalider des patterns (`stats:{doctorId}:*` par exemple), la commande Redis `KEYS` est utilisée — elle bloque Redis pendant l'exécution. À migrer vers `SCAN` en production au-delà de 10 000 médecins.
+
+### Pas de signature électronique
+Les PDFs générés ne sont pas signés électroniquement. Valeur probante limitée en cas de litige. Prévoir intégration **Barid eSign** en V2.
+
+### Pas d'envoi email automatique
+Les factures ne sont pas envoyées par email aux destinataires. Prévoir intégration Mailgun / Postmark en V2.
+
+---
+
 ## Payment provider limited to mock in dev
 
 **Severity**: Low (expected in dev)  

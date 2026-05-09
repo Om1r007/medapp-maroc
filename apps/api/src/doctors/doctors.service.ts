@@ -10,6 +10,7 @@ import { QueueService } from "../queue/queue.service";
 import { VideoService } from "../video/video.service";
 import { AvailabilityService } from "../availability/availability.service";
 import { ConsultationsService } from "../consultations/consultations.service";
+import { InvoicesService } from "../invoices/invoices.service";
 import { EndConsultationDto } from "../consultations/dto/end-consultation.dto";
 import type { DoctorProfile } from "@medapp/shared-types";
 
@@ -23,6 +24,7 @@ export class DoctorsService {
     private readonly videoService: VideoService,
     private readonly availabilityService: AvailabilityService,
     private readonly consultationsService: ConsultationsService,
+    private readonly invoicesService: InvoicesService,
   ) {}
 
   async getMe(userId: string): Promise<DoctorProfile> {
@@ -189,6 +191,11 @@ export class DoctorsService {
     } catch (err) {
       this.logger.warn(`tryMatch after endConsultation failed: ${err}`);
     }
+
+    // Générer le reçu patient (fire-and-forget)
+    this.invoicesService.createPaymentReceipt(consultationId).catch((err) =>
+      this.logger.error(`createPaymentReceipt failed: ${err}`),
+    );
 
     return updated;
   }

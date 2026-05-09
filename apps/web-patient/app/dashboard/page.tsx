@@ -1,11 +1,41 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/lib/auth-store";
 import { useRequireAuth } from "@/lib/use-require-auth";
 import { api } from "@/lib/api";
 import type { Consultation } from "@medapp/shared-types";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+
+interface InvoiceItem {
+  id: string;
+  number: string;
+  type: string;
+  status: string;
+  issuedAt: string;
+  amountTtc: number;
+  currency: string;
+}
+
+async function downloadPdf(invoiceId: string, invoiceNumber: string) {
+  const token = localStorage.getItem("patientAccessToken");
+  const res = await fetch(`${API_URL}/api/invoices/${invoiceId}/download`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("Download failed");
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${invoiceNumber}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 
 const ACTIVE_STATUSES = ["WAITING_PAYMENT", "IN_QUEUE", "MATCHED", "IN_PROGRESS"] as const;
 type ActiveStatus = (typeof ACTIVE_STATUSES)[number];
@@ -48,6 +78,7 @@ export default function DashboardPage() {
   const user = useRequireAuth();
   const router = useRouter();
   const { logout } = useAuthStore();
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const { data: consultations } = useQuery({
     queryKey: ["consultations-me"],
@@ -64,6 +95,25 @@ export default function DashboardPage() {
     refetchOnWindowFocus: true,
     staleTime: 0,
   });
+
+  const { data: invoicesData } = useQuery({
+    queryKey: ["invoices", "me"],
+    queryFn: () => api.get<{ items: InvoiceItem[] }>("/invoices/me?limit=5"),
+    enabled: !!user,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+  });
+
+  async function handleDownload(invoice: InvoiceItem) {
+    setDownloadingId(invoice.id);
+    try {
+      await downloadPdf(invoice.id, invoice.number);
+    } catch {
+      // silently fail — user can retry
+    } finally {
+      setDownloadingId(null);
+    }
+  }
 
   if (!user) return null;
 
@@ -166,6 +216,44 @@ export default function DashboardPage() {
                     >
                       {STATUS_LABELS[c.status]}
                     </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {/* ── Mes reçus ─────────────────────────────────────────────────── */}
+        <section className="mt-6 rounded-2xl bg-white p-8 shadow-sm">
+          <h2 className="text-xl font-semibold">Mes reçus</h2>
+
+          {!invoicesData || invoicesData.items.length === 0 ? (
+            <p className="mt-4 text-sm text-gray-400">Aucun reçu disponible.</p>
+          ) : (
+            <ul className="mt-4 divide-y divide-gray-100">
+              {invoicesData.items.map((inv) => (
+                <li key={inv.id} className="flex items-center justify-between py-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">{inv.number}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {new Date(inv.issuedAt).toLocaleDateString("fr-FR", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-medium text-gray-700">
+                      {inv.amountTtc.toFixed(2)} {inv.currency}
+                    </span>
+                    <button
+                      onClick={() => handleDownload(inv)}
+                      disabled={downloadingId === inv.id}
+                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      {downloadingId === inv.id ? "…" : "PDF"}
+                    </button>
                   </div>
                 </li>
               ))}

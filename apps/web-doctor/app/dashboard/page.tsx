@@ -222,12 +222,18 @@ export default function DoctorDashboardPage() {
           </div>
 
           {isVerified && (
-            <div className="mt-4 border-t border-gray-100 pt-4">
+            <div className="mt-4 border-t border-gray-100 pt-4 flex gap-6">
               <Link
                 href="/calendar"
                 className="text-sm text-brand hover:underline"
               >
-                Modifier mon calendrier de disponibilité →
+                Calendrier →
+              </Link>
+              <Link
+                href="/invoices"
+                className="text-sm text-brand hover:underline"
+              >
+                Mes factures →
               </Link>
             </div>
           )}

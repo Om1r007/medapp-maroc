@@ -32,8 +32,9 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  patient Patient?
-  doctor  Doctor?
+  patient  Patient?
+  doctor   Doctor?
+  invoices Invoice[] @relation("InvoiceRecipient")
 
 }
 
@@ -147,7 +148,8 @@ model Consultation {
   endedAt             DateTime?
   autoClosedByTimeout Boolean   @default(false)
 
-  rating Rating?
+  rating  Rating?
+  invoice Invoice?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -215,4 +217,49 @@ model Rating {
   createdAt DateTime @default(now())
 
   @@index([doctorId])
+}
+
+// ============================================================
+// INVOICES — Brique 5c (Facturation PDF)
+// ============================================================
+
+enum InvoiceType {
+  PAYMENT_RECEIPT  // reçu patient par consultation
+  MONTHLY_INVOICE  // facture mensuelle médecin (rétrocession)
+}
+
+enum InvoiceStatus {
+  ISSUED
+  CANCELLED
+  PAID
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  type            InvoiceType
+  number          String        @unique  // RECU-2026-0001 ou FAC-2026-0001
+  issuedAt        DateTime      @default(now())
+  periodStart     DateTime?     // pour MONTHLY_INVOICE
+  periodEnd       DateTime?     // pour MONTHLY_INVOICE
+  recipientUserId String
+  recipientName   String        // figé à l'émission
+  recipientIce    String?       // si professionnel
+  amountHt        Decimal       @db.Decimal(10, 2)
+  tvaAmount       Decimal       @db.Decimal(10, 2) @default(0)
+  amountTtc       Decimal       @db.Decimal(10, 2)
+  currency        String        @default("MAD")
+  pdfPath         String
+  status          InvoiceStatus @default(ISSUED)
+  consultationId  String?       @unique  // lien si PAYMENT_RECEIPT
+  doctorId        String?       // lien si MONTHLY_INVOICE
+  metadata        Json?         // détails (nb consultations, totaux…)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  recipient    User          @relation("InvoiceRecipient", fields: [recipientUserId], references: [id])
+  consultation Consultation? @relation(fields: [consultationId], references: [id])
+
+  @@index([recipientUserId, type])
+  @@index([type, periodStart])
+  @@index([doctorId, type])
 }

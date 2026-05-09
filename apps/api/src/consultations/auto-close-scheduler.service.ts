@@ -8,6 +8,7 @@ import { Cron } from "@nestjs/schedule";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../prisma/prisma.service";
 import { VideoService } from "../video/video.service";
+import { InvoicesService } from "../invoices/invoices.service";
 
 @Injectable()
 export class AutoCloseSchedulerService {
@@ -17,6 +18,7 @@ export class AutoCloseSchedulerService {
     private readonly prisma: PrismaService,
     private readonly videoService: VideoService,
     private readonly config: ConfigService,
+    private readonly invoicesService: InvoicesService,
   ) {}
 
   @Cron("0 */5 * * * *", { name: "consultation-auto-close" })
@@ -56,6 +58,11 @@ export class AutoCloseSchedulerService {
           // Room déjà expirée ou supprimée — ignoré
         }
       }
+
+      // Générer le reçu patient (fire-and-forget)
+      this.invoicesService.createPaymentReceipt(c.id).catch((err) =>
+        this.logger.error(`createPaymentReceipt (auto-close) failed for ${c.id}: ${err}`),
+      );
     }
 
     return { closed: stale.length };
