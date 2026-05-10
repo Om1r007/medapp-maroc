@@ -85,4 +85,14 @@ export class ConsultationsController {
   ) {
     return this.consultations.cancel(id, req.user.id);
   }
+
+  @Post(":id/fallback-to-global")
+  @HttpCode(200)
+  @Roles("PATIENT")
+  fallbackToGlobal(
+    @Param("id") id: string,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.consultations.fallbackToGlobal(id, req.user.id);
+  }
 }

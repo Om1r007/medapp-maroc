@@ -85,6 +85,13 @@ export class AuthService {
             ordreNumber: dto.ordreNumber,
             speciality: dto.speciality,
             status: "PENDING", // Vérification manuelle requise
+            ...(dto.inpe && { inpe: dto.inpe }),
+            ...(dto.diplomaUniversity && { diplomaUniversity: dto.diplomaUniversity }),
+            ...(dto.diplomaYear && { diplomaYear: dto.diplomaYear }),
+            ...(dto.yearsOfExperience !== undefined && { yearsOfExperience: dto.yearsOfExperience }),
+            ...(dto.languages?.length && { languages: dto.languages }),
+            ...(dto.bio && { bio: dto.bio }),
+            verificationStep: dto.inpe && dto.ordreNumber ? "PROFESSIONAL" : "IDENTITY",
           },
         },
       },

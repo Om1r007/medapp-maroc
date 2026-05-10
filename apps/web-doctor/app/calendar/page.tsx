@@ -2,8 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { ChevronLeft, Clock } from "lucide-react";
 import { useRequireAuth } from "@/lib/use-require-auth";
 import { api } from "@/lib/api";
+import { Button } from "@/components/ui/Button";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { WeeklyScheduleEditor } from "@/components/WeeklyScheduleEditor";
 import { ExceptionsList } from "@/components/ExceptionsList";
 import { AvailabilityOverrideCard } from "@/components/AvailabilityOverrideCard";
@@ -21,51 +24,59 @@ export default function CalendarPage() {
 
   if (!user || isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <p className="text-gray-500">Chargement…</p>
+      <div className="min-h-screen bg-neutral-50 p-6">
+        <div className="mx-auto max-w-3xl space-y-4">
+          <Skeleton className="h-16 w-full rounded-xl" />
+          <Skeleton className="h-48 w-full rounded-xl" />
+          <Skeleton className="h-48 w-full rounded-xl" />
+        </div>
       </div>
     );
   }
 
   if (doctor?.status !== "VERIFIED") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-6">
         <div className="text-center">
-          <p className="text-gray-500">
+          <p className="text-neutral-500">
             Le calendrier est accessible une fois votre compte vérifié.
           </p>
-          <button
+          <Button
+            variant="ghost"
+            className="mt-4"
             onClick={() => router.push("/dashboard")}
-            className="mt-4 text-sm text-brand hover:underline"
           >
-            ← Retour au tableau de bord
-          </button>
+            Retour au tableau de bord
+          </Button>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto max-w-3xl space-y-6">
-
-        <div className="flex items-center justify-between">
-          <div>
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="mb-1 text-sm text-gray-500 hover:text-gray-700"
-            >
-              ← Tableau de bord
-            </button>
-            <h1 className="text-2xl font-bold text-brand-dark">
+    <div className="min-h-screen bg-neutral-50">
+      {/* Header */}
+      <header className="sticky top-0 z-20 bg-white border-b border-neutral-200 h-16 flex items-center px-6">
+        <div className="mx-auto w-full max-w-3xl flex items-center gap-3">
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="rounded-lg p-1.5 hover:bg-neutral-100 transition-colors"
+          >
+            <ChevronLeft className="h-5 w-5 text-neutral-600" />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-base font-semibold text-neutral-900">
               Mon calendrier de disponibilité
             </h1>
-            <p className="mt-1 text-sm text-gray-500">
-              Fuseau horaire : Africa/Casablanca (UTC+1)
-            </p>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-neutral-400">
+            <Clock className="h-3.5 w-3.5" />
+            Africa/Casablanca (UTC+1)
           </div>
         </div>
+      </header>
 
+      <main className="mx-auto max-w-3xl space-y-4 p-6">
         <AvailabilityOverrideCard
           doctor={{
             isAvailable: doctor.isAvailable,
@@ -74,11 +85,14 @@ export default function CalendarPage() {
           }}
         />
 
-        <WeeklyScheduleEditor />
+        <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+          <WeeklyScheduleEditor />
+        </div>
 
-        <ExceptionsList />
-
-      </div>
-    </main>
+        <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+          <ExceptionsList />
+        </div>
+      </main>
+    </div>
   );
 }

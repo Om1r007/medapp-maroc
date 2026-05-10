@@ -5,4 +5,8 @@ export class CreateConsultationDto {
   @IsString()
   @MaxLength(500)
   reason?: string;
+
+  @IsOptional()
+  @IsString()
+  requestedDoctorId?: string;
 }

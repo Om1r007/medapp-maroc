@@ -34,18 +34,14 @@ export class PaymentsService {
       where: { id: consultationId },
       data: {
         paymentStatus: "SUCCEEDED",
-        status: "IN_QUEUE",
-        queuedAt: new Date(),
+        status: "WAITING_PRE_CONSULT",
       },
       select: {
         id: true,
         status: true,
         paymentStatus: true,
-        queuedAt: true,
       },
     });
-
-    await this.queueService.enqueue(consultationId);
 
     return updated;
   }
