@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git rm *)",
+      "Bash(pnpm add *)",
+      "Bash(pnpm exec *)",
+      "Bash(curl -s http://localhost:4000/api/health)",
+      "Bash(curl *)",
+      "Bash(xargs grep *)",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":4000\")",
+      "Bash(findstr LISTENING)",
+      "Bash(taskkill *)",
+      "PowerShell(Stop-Process *)",
+      "PowerShell(Start-Process -FilePath \"pnpm\" -ArgumentList \"exec\",\"ts-node\",\"src/main.ts\" -WorkingDirectory \"C:\\\\Users\\\\surface\\\\Downloads\\\\medapp-maroc\\\\medapp-maroc\\\\apps\\\\api\" -WindowStyle Hidden)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://localhost:4000/api/consultations\" -Method POST -ContentType \"application/json\" -Body '{}' -UseBasicParsing -ErrorAction SilentlyContinue)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(npx prisma *)",
+      "Bash(npx ts-node *)",
+      "Bash(git commit *)",
+      "Bash(npx --yes ts-node --transpile-only -r tsconfig-paths/register src/main.ts)",
+      "Bash(node_modules/.bin/ts-node --transpile-only -r tsconfig-paths/register src/main.ts)",
+      "Bash(../../node_modules/.bin/ts-node --transpile-only -r tsconfig-paths/register src/main.ts)",
+      "Bash(npx tsc *)",
+      "Bash(pnpm --filter api add pdfkit @types/pdfkit)",
+      "Bash(pnpm *)",
+      "Bash(node_modules/.bin/prisma generate *)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(wait)",
+      "Bash(node_modules/.bin/prisma migrate *)",
+      "Bash(git *)",
+      "PowerShell(cd \"C:\\\\Users\\\\surface\\\\Downloads\\\\medapp-maroc\\\\medapp-maroc\\\\apps\\\\api\"; $env:PRISMA_MIGRATE_SKIP_GENERATE=\"true\"; npx prisma migrate dev --name doctor_quality_system --create-only 2>&1)",
+      "PowerShell(cd \"C:\\\\Users\\\\surface\\\\Downloads\\\\medapp-maroc\\\\medapp-maroc\\\\apps\\\\api\"; $env:CI=\"true\"; npx prisma migrate dev --name doctor_quality_system 2>&1)"
+    ]
+  }
+}
