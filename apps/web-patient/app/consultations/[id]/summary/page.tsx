@@ -3,8 +3,12 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { CheckCircle, Download, FileText, Pill, Stethoscope } from "lucide-react";
 import { useRequireAuth } from "@/lib/use-require-auth";
 import { api } from "@/lib/api";
+import { Button } from "@/components/ui/Button";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { BottomNav } from "@/components/navigation/BottomNav";
 import type { ConsultationSummary } from "@medapp/shared-types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -32,6 +36,16 @@ async function downloadPdf(invoiceId: string, invoiceNumber: string) {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+function SummarySkeleton() {
+  return (
+    <div className="space-y-4">
+      <Skeleton className="h-32 w-full rounded-xl" />
+      <Skeleton className="h-40 w-full rounded-xl" />
+      <Skeleton className="h-32 w-full rounded-xl" />
+    </div>
+  );
 }
 
 export default function ConsultationSummaryPage() {
@@ -68,137 +82,163 @@ export default function ConsultationSummaryPage() {
 
   if (!user) return null;
 
-  if (isLoading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand border-t-transparent" />
-      </main>
-    );
-  }
-
-  if (!summary) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50">
-        <p className="text-gray-500">Compte-rendu introuvable.</p>
-      </main>
-    );
-  }
-
   return (
-    <main className="min-h-screen bg-gray-50 p-6">
-      <div className="mx-auto max-w-2xl">
-        <button
-          onClick={() => router.push("/dashboard")}
-          className="mb-6 text-sm text-gray-500 hover:text-gray-700"
-        >
-          ← Retour au tableau de bord
-        </button>
+    <div className="min-h-screen bg-neutral-50 pb-24 md:pb-6">
+      {/* Header */}
+      <header className="bg-white border-b border-neutral-200 h-16 flex items-center px-6">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded bg-primary-500 flex items-center justify-center">
+            <span className="text-white text-xs font-bold">M</span>
+          </div>
+          <span className="font-semibold text-neutral-900 text-sm tracking-tight">Medapp</span>
+        </div>
+      </header>
 
-        <div className="rounded-2xl bg-white p-8 shadow-sm">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-brand-dark">
-                Compte-rendu de consultation
+      <main className="mx-auto max-w-2xl p-6 space-y-4">
+        {isLoading ? (
+          <SummarySkeleton />
+        ) : !summary ? (
+          <div className="bg-white border border-neutral-200 rounded-xl p-8 text-center text-neutral-500">
+            Compte-rendu introuvable.
+          </div>
+        ) : (
+          <>
+            {/* Hero */}
+            <div className="bg-white border border-neutral-200 rounded-xl p-8 text-center">
+              <CheckCircle className="mx-auto h-12 w-12 text-primary-500 mb-4" />
+              <h1 className="text-2xl font-semibold text-neutral-900">
+                Consultation terminée
               </h1>
-              <p className="mt-1 text-sm text-gray-500">
-                {summary.createdAt
-                  ? new Date(summary.createdAt).toLocaleDateString("fr-FR", {
+              {summary.doctor && (
+                <p className="mt-2 text-neutral-500">
+                  Avec Dr. {summary.doctor.firstName} {summary.doctor.lastName}
+                  {summary.createdAt && (
+                    <> · {new Date(summary.createdAt).toLocaleDateString("fr-FR", {
                       day: "numeric",
                       month: "long",
                       year: "numeric",
-                    })
-                  : "—"}
-                {summary.durationMinutes !== null && (
-                  <> · Durée : {summary.durationMinutes} min</>
-                )}
-              </p>
+                    })}</>
+                  )}
+                </p>
+              )}
+              {summary.durationMinutes != null && (
+                <p className="mt-1 text-xs text-neutral-400">
+                  Durée : {summary.durationMinutes} min
+                </p>
+              )}
             </div>
-            <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800">
-              Terminée
-            </span>
-          </div>
 
-          <dl className="mt-8 space-y-5 divide-y divide-gray-100">
+            {/* Doctor */}
             {summary.doctor && (
-              <div className="pt-5 first:pt-0">
-                <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-                  Médecin
-                </dt>
-                <dd className="mt-1 text-gray-800">
-                  Dr. {summary.doctor.firstName} {summary.doctor.lastName}
-                  <span className="ml-2 text-sm text-gray-500">
-                    — {summary.doctor.speciality}
-                  </span>
-                </dd>
+              <div className="bg-white border border-neutral-200 rounded-xl p-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary-50">
+                    <Stethoscope className="h-5 w-5 text-primary-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-neutral-900">
+                      Dr. {summary.doctor.firstName} {summary.doctor.lastName}
+                    </p>
+                    <p className="text-sm text-neutral-500">{summary.doctor.speciality}</p>
+                  </div>
+                </div>
               </div>
             )}
 
-            {summary.reason && (
-              <div className="pt-5">
-                <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-                  Motif de consultation
-                </dt>
-                <dd className="mt-1 text-gray-800">{summary.reason}</dd>
-              </div>
-            )}
+            {/* Compte-rendu */}
+            <div className="bg-white border border-neutral-200 rounded-xl p-6 space-y-5">
+              <p className="text-sm font-semibold text-neutral-900">
+                Compte-rendu de votre consultation
+              </p>
 
-            <div className="pt-5">
-              <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-                Diagnostic
-              </dt>
-              <dd className="mt-1 text-gray-800 whitespace-pre-wrap">
-                {summary.diagnosis ?? (
-                  <span className="text-gray-400 italic">Non renseigné</span>
-                )}
-              </dd>
+              {summary.reason && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">
+                    Motif
+                  </p>
+                  <p className="text-neutral-800">{summary.reason}</p>
+                </div>
+              )}
+
+              <div>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <FileText className="h-4 w-4 text-neutral-400" />
+                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    Diagnostic
+                  </p>
+                </div>
+                <p className="text-neutral-800 whitespace-pre-wrap">
+                  {summary.diagnosis ?? (
+                    <span className="text-neutral-400 italic">Non renseigné</span>
+                  )}
+                </p>
+              </div>
+
+              {summary.prescription && (
+                <div className="border-t border-neutral-100 pt-5">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Pill className="h-4 w-4 text-primary-500" />
+                    <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                      Prescription
+                    </p>
+                  </div>
+                  <p className="text-neutral-800 whitespace-pre-wrap">{summary.prescription}</p>
+                </div>
+              )}
+
+              <div className="border-t border-neutral-100 pt-4 flex items-center justify-between">
+                <span className="text-sm text-neutral-500">Tarif</span>
+                <span className="font-semibold text-neutral-900">{summary.amount} MAD</span>
+              </div>
             </div>
 
-            {summary.prescription && (
-              <div className="pt-5">
-                <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-                  Prescription
-                </dt>
-                <dd className="mt-1 text-gray-800 whitespace-pre-wrap">
-                  {summary.prescription}
-                </dd>
-              </div>
-            )}
+            {/* Documents */}
+            <div className="bg-white border border-neutral-200 rounded-xl p-6">
+              <p className="text-sm font-semibold text-neutral-900 mb-4">Vos documents</p>
 
-            <div className="pt-5">
-              <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-                Tarif
-              </dt>
-              <dd className="mt-1 font-medium text-gray-800">
-                {summary.amount} MAD
-              </dd>
+              {invoice ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between rounded-lg bg-neutral-50 border border-neutral-100 px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Download className="h-4 w-4 text-neutral-400" />
+                      <div>
+                        <p className="text-sm font-medium text-neutral-800">Reçu de paiement</p>
+                        <p className="text-xs text-neutral-500">{invoice.number}</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleDownload}
+                      loading={downloading}
+                    >
+                      Télécharger
+                    </Button>
+                  </div>
+                  {downloadError && (
+                    <p className="text-xs text-error-700 text-center">{downloadError}</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-neutral-400 text-center py-4">
+                  Reçu en cours de génération…
+                </p>
+              )}
             </div>
-          </dl>
 
-          <div className="mt-8 space-y-2">
-            {invoice ? (
-              <>
-                <button
-                  onClick={handleDownload}
-                  disabled={downloading}
-                  className="w-full rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-white hover:bg-brand/90 disabled:opacity-60"
-                >
-                  {downloading ? "Téléchargement…" : `Télécharger le reçu ${invoice.number} (PDF)`}
-                </button>
-                {downloadError && (
-                  <p className="text-center text-xs text-red-600">{downloadError}</p>
-                )}
-              </>
-            ) : (
-              <button
-                disabled
-                className="w-full rounded-lg border border-gray-200 px-5 py-2.5 text-sm text-gray-400 cursor-not-allowed"
-              >
-                Reçu en cours de génération…
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    </main>
+            {/* Actions */}
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={() => router.push("/dashboard")}
+            >
+              Retour au tableau de bord
+            </Button>
+          </>
+        )}
+      </main>
+
+      <BottomNav />
+    </div>
   );
 }

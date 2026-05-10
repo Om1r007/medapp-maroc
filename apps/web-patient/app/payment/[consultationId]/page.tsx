@@ -29,7 +29,7 @@ export default function PaymentPage() {
     try {
       await api.post(`/payments/${consultationId}/simulate-${type}`, {});
       if (type === "success") {
-        router.push(`/queue/${consultationId}`);
+        router.push(`/consultation/${consultationId}/pre-consult`);
       } else {
         setError("Paiement refusé. Vérifiez vos informations et réessayez.");
         setLoading(null);

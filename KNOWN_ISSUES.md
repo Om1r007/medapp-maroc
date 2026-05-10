@@ -59,3 +59,64 @@ Les factures ne sont pas envoyées par email aux destinataires. Prévoir intégr
 
 **Description**  
 `PAYMENT_PROVIDER=mock` returns a fake successful payment. Real CMI integration (Moroccan payment gateway) requires a bank convention and test credentials. The mock is intentional during MVP development.
+
+---
+
+## Brique 6.2 — Pré-consultation
+
+### Liste de symptômes hardcodée
+Les 30 symptômes proposés dans le wizard de pré-consultation sont définis statiquement dans `pre-consult.controller.ts`. En V2, migrer vers une table `Symptom` en base de données éditable par les admins.
+
+### Mode urgent à monitorer
+Le déclenchement du mode URGENT (score douleur ≥ 8 ou case cochée par le patient) n'alerte pas le médecin en temps réel. À intégrer avec un système de notification push/email en V2.
+
+---
+
+## Brique 6.3 — Dossier patient partagé
+
+### Version CGU hardcodée pour MVP
+La version des CGU acceptées par le patient est fixée à `"2026-05-v1"` dans `sharing-consent.service.ts`. En V2, externaliser cette valeur en base de données avec un mécanisme de re-consentement automatique si la version change.
+
+### Hash IP avec SHA-256 + salt fixe pour MVP
+Le hash des IPs pour l'audit (PatientFileAccessLog, ConsentLog) utilise un salt fixe défini dans la variable d'environnement `AUDIT_IP_SALT`. En V2, implémenter une rotation périodique du salt pour anonymiser progressivement les anciens logs.
+
+### Notification email au patient si nouvelle consultation accède à son dossier (V2)
+Hors scope V1. À implémenter via Postmark (Brique 7) — le patient devrait recevoir un email à chaque accès médecin à son dossier pour une transparence maximale conforme à la Loi 09-08.
+
+### Rétention logs d'accès — pas de purge automatique
+Les `PatientFileAccessLog` doivent être conservés minimum 2 ans (obligation médicale Maroc). Aucun mécanisme de purge automatique n'est implémenté. À ajouter en V2 avec un scheduler qui archive les logs > 2 ans en cold storage.
+
+---
+
+## Brique 6.4 — Médecin référent
+
+### Formule d'estimation du délai simplifiée
+`getNextAvailabilityForDoctor()` calcule `queueLength × avgMin + 5min` en ignorant la consultation en cours du médecin. En V2, interroger `startedAt` de la consultation active pour une estimation plus précise.
+
+### Notification push/email pas implémentée
+Le `FallbackCheckerScheduler` détecte les patients référents qui attendent depuis plus de 20 min et logue un warning, mais n'envoie pas de notification push ni email. À intégrer avec Postmark/OneSignal en V2.
+
+### Un seul médecin référent par patient
+La brique 6.4 limite chaque patient à un seul médecin référent (un pointeur `referringDoctorId` sur `Patient`). Une liste multi-référents n'est pas supportée. Acceptable pour le MVP.
+
+### Pas de vérification de disponibilité avant la désignation
+Lors de la création d'une consultation en mode référent, la disponibilité du médecin n'est pas vérifiée au moment de l'appel `POST /consultations`. La vérification se fait au `enqueue()` : si le médecin est indisponible, la consultation reste en file jusqu'à ce qu'il devienne disponible ou jusqu'au timeout (15 min → remboursement).
+
+---
+
+## Brique 9a — web-landing
+
+### Pages légales à valider par avocat
+Les pages `/mentions-legales`, `/confidentialite`, `/cgu` contiennent des placeholders. Ces documents doivent être rédigés et validés par un avocat marocain spécialisé en droit numérique et médical avant toute mise en production.
+
+### Formulaire de contact — email mock pour MVP
+Le formulaire `/contact` envoie un `POST /api/contact` qui pour l'instant logge seulement le message côté serveur (`console.log`). À connecter à un vrai service email transactionnel (Postmark, Mailgun) avant la prod. Variable d'environnement `CONTACT_EMAIL` à ajouter au `.env`.
+
+### OG-image générique
+Le fichier `/public/og-image.jpg` n'existe pas encore (référencé dans les métadonnées Open Graph). À créer avec Figma ou Canva (1200×630px) avant la mise en ligne pour une preview correcte sur Facebook/LinkedIn/Twitter.
+
+### Témoignages absents pour MVP
+La section Témoignages sur la homepage est un placeholder honnête en attendant les premiers beta-testers. À remplacer par de vrais témoignages après la phase bêta.
+
+### Accordion Radix — animations CSS custom à ajouter si besoin
+Les animations `accordionDown`/`accordionUp` dans `components/home/FAQ.tsx` référencent des keyframes Tailwind custom. Si l'animation est absente, ajouter dans `tailwind.config.ts` ou `globals.css` les keyframes correspondantes.

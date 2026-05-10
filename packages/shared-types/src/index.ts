@@ -8,12 +8,27 @@ export type DoctorStatus = "PENDING" | "VERIFIED" | "REJECTED" | "SUSPENDED";
 
 export type ConsultationStatus =
   | "WAITING_PAYMENT"
+  | "WAITING_PRE_CONSULT"
   | "IN_QUEUE"
   | "MATCHED"
   | "IN_PROGRESS"
   | "COMPLETED"
   | "CANCELLED"
   | "REFUNDED";
+
+export type PreConsultMode = "STANDARD" | "EXPRESS" | "URGENT";
+
+export interface PreConsultData {
+  mainSymptom: string;
+  isCustomSymptom: boolean;
+  duration: "less24h" | "1to3d" | "4to7d" | "1to2w" | "more2w" | "chronic";
+  painLevel: number | null;
+  additionalInfo: string;
+  urgentNote?: string;
+  allergiesSnapshot: string[];
+  medicationsSnapshot: string[];
+  conditionsSnapshot: string[];
+}
 
 export type PaymentStatus =
   | "PENDING"
@@ -114,6 +129,7 @@ export interface Doctor {
 // ---------- Consultation ----------
 export interface CreateConsultationDto {
   reason?: string;
+  requestedDoctorId?: string;
 }
 
 export interface Consultation {
@@ -157,6 +173,7 @@ export interface ConsultationSummary {
   createdAt: string;
   startedAt: string | null;
   endedAt: string | null;
+  excludedFromSharing: boolean;
   patient: { firstName: string; lastName: string };
   doctor: { firstName: string; lastName: string; speciality: string } | null;
 }
@@ -170,6 +187,9 @@ export interface QueueStatus {
   estimatedWaitMinutes: number;
   timeRemainingSeconds: number;
   queuedAt?: string;
+  isReferringRequest: boolean;
+  requestedDoctorName: string | null;
+  referringWaitedMinutes: number;
 }
 
 // ---------- Queue ----------
@@ -210,6 +230,78 @@ export interface ComputedSlot {
 export interface SetOverrideDto {
   isAvailable: boolean;
   durationMinutes?: number;
+}
+
+// ---------- Médecin référent — Brique 6.4 ----------
+export interface ReferringDoctor {
+  id: string;
+  firstName: string;
+  lastName: string;
+  speciality: string | null;
+  profilePhotoUrl: string | null;
+  qualityScore: number | null;
+  setAt: string | null;
+}
+
+export interface PastDoctor {
+  id: string;
+  firstName: string;
+  lastName: string;
+  speciality: string | null;
+  profilePhotoUrl: string | null;
+  qualityScore: number | null;
+  lastConsultationDate: string;
+}
+
+export interface DoctorNextAvailability {
+  isAvailableNow: boolean;
+  estimatedWaitMinutes: number;
+  doctorName: string;
+}
+
+// ---------- Sharing — Brique 6.3 ----------
+export type FileAccessType =
+  | "VIEW_PROFILE"
+  | "VIEW_HISTORY"
+  | "VIEW_CONSULTATION"
+  | "VIEW_DOCUMENT";
+
+export interface SharingConsent {
+  isEnabled: boolean;
+  enabledAt: string | null;
+  disabledAt: string | null;
+  cguVersion: string | null;
+}
+
+export interface FileAccessLogEntry {
+  id: string;
+  doctorName: string;
+  doctorSpeciality: string;
+  accessType: FileAccessType;
+  accessedAt: string;
+}
+
+export interface ExcludedConsultationEntry {
+  id: string;
+  date: string;
+  doctorName: string | null;
+  excludedReason: string | null;
+  excludedAt: string | null;
+}
+
+export interface SharedHistoryEntry {
+  id: string;
+  date: string;
+  doctorName: string;
+  doctorSpeciality: string | null;
+  mainSymptom: string | null;
+  diagnosis: string | null;
+  prescription: string | null;
+}
+
+export interface SharedPatientHistory {
+  hasConsent: boolean;
+  history: SharedHistoryEntry[];
 }
 
 // ---------- API Response wrappers ----------

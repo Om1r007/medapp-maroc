@@ -1,0 +1,673 @@
+🎯 Brique 9a — Création du site vitrine medapp.ma
+Vision
+Créer un nouveau projet Next.js dans le monorepo apps/web-landing/ qui sera le site vitrine de Medapp Maroc. Ce site est uniquement marketing/conversion : il transforme un visiteur en utilisateur de l'app patient.
+Inspiration directe : Medadom (medadom.com) + Forward Health (forwardhealthtech.com).
+⚠️ Règles d'or NON NÉGOCIABLES
+
+Ce projet n'a AUCUN code produit — pas d'auth, pas de dashboard, pas de queue. Juste des pages statiques marketing.
+Tous les CTA pointent vers app.medapp.ma (variable d'environnement NEXT_PUBLIC_PATIENT_APP_URL).
+Lien "Espace médecin" pointe vers pro.medapp.ma (variable NEXT_PUBLIC_DOCTOR_APP_URL).
+Design system Forward-style identique à celui des apps (Brique 7) — palette, typo, composants.
+Mobile-first strict — le site doit être impeccable à 375px.
+SEO-ready — métadonnées, Open Graph, schema.org structured data, sitemap.
+Performance maximale — Lighthouse > 95 sur Performance, Accessibility, Best Practices, SEO.
+Pas de tracking pour le MVP — Google Analytics et Hotjar viendront plus tard.
+
+🏗️ Setup technique
+Création du projet
+Dans le monorepo, à la racine :
+bashmkdir apps/web-landing
+cd apps/web-landing
+# Créer un nouveau Next.js 15 avec TypeScript + Tailwind
+Configuration package.json :
+json{
+  "name": "web-landing",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3002",
+    "build": "next build",
+    "start": "next start -p 3002",
+    "lint": "next lint"
+  }
+}
+Port 3002 (3000 = patient, 3001 = médecin, 3002 = landing).
+Variables d'environnement (.env.local)
+envNEXT_PUBLIC_PATIENT_APP_URL=http://localhost:3000
+NEXT_PUBLIC_DOCTOR_APP_URL=http://localhost:3001
+NEXT_PUBLIC_SITE_URL=http://localhost:3002
+Et .env.example correspondant pour la prod :
+envNEXT_PUBLIC_PATIENT_APP_URL=https://app.medapp.ma
+NEXT_PUBLIC_DOCTOR_APP_URL=https://pro.medapp.ma
+NEXT_PUBLIC_SITE_URL=https://medapp.ma
+Design system partagé
+Copie exactement le tailwind.config.ts de web-patient (palette Forward, typo Plus Jakarta Sans, fontSize, borderRadius, boxShadow). Pas de divergence.
+Recopie aussi les composants UI nécessaires depuis web-patient/components/ui/ :
+
+Button, Card, Badge (au minimum)
+
+⚠️ Pour MVP, dupliquer est acceptable. En V2 on factorisera dans packages/ui.
+Update Turbo
+Met à jour turbo.json à la racine pour inclure le nouveau projet dans les pipelines dev, build, lint.
+📄 Structure des pages
+apps/web-landing/
+├── app/
+│   ├── layout.tsx                  (root layout avec TopNav + Footer)
+│   ├── page.tsx                    (homepage)
+│   ├── comment-ca-marche/page.tsx
+│   ├── tarifs/page.tsx
+│   ├── medecins/page.tsx           (recrutement médecins)
+│   ├── securite/page.tsx
+│   ├── contact/page.tsx
+│   ├── a-propos/page.tsx
+│   ├── mentions-legales/page.tsx
+│   ├── confidentialite/page.tsx
+│   ├── cgu/page.tsx
+│   ├── sitemap.ts
+│   └── robots.ts
+├── components/
+│   ├── ui/
+│   │   ├── Button.tsx
+│   │   ├── Card.tsx
+│   │   └── Badge.tsx
+│   ├── layout/
+│   │   ├── TopNav.tsx
+│   │   └── Footer.tsx
+│   ├── home/
+│   │   ├── Hero.tsx
+│   │   ├── HowItWorks.tsx
+│   │   ├── Features.tsx
+│   │   ├── Testimonials.tsx
+│   │   ├── TrustSignals.tsx
+│   │   ├── FAQ.tsx
+│   │   └── CTASection.tsx
+│   └── shared/
+│       ├── SectionTitle.tsx
+│       └── PageHero.tsx
+├── lib/
+│   ├── cn.ts
+│   └── seo.ts                      (helpers SEO)
+└── public/
+    ├── og-image.jpg                (1200x630 pour Open Graph)
+    ├── logo.svg
+    └── favicon.ico
+🎨 Pages détaillées
+PAGE 1 — Homepage (/)
+Cette page est la plus importante. Elle doit convertir en moins de 5 secondes de scroll.
+Section 1 — Hero (above the fold)
+┌────────────────────────────────────────────────┐
+│ [Logo Medapp]              [Connexion] [Médecins]│ TopNav
+├────────────────────────────────────────────────┤
+│                                                │
+│   Un médecin disponible                        │ ← H1, text-5xl/7xl
+│   en moins de 15 minutes.                      │   font-bold tracking-tight
+│                                                │   color text-neutral-900
+│   Sans rendez-vous, à toute heure.             │ ← text-xl/2xl
+│   Médecins certifiés. 150 MAD.                 │   text-neutral-600
+│                                                │
+│   ┌──────────────────────────────────┐        │
+│   │  Consulter maintenant →          │        │ ← Button primary lg
+│   └──────────────────────────────────┘        │   height: 56px
+│                                                │
+│   ⭐ 4.9/5 · 12 000+ consultations · 50+ méd.  │ ← Social proof line
+│                                                │   text-sm text-neutral-500
+│                                                │
+└────────────────────────────────────────────────┘
+Texte exact :
+H1: "Un médecin disponible en moins de 15 minutes."
+Sous-titre: "Sans rendez-vous, à toute heure. Médecins certifiés inscrits à l'Ordre des Médecins du Maroc. 150 MAD par consultation, sans frais cachés."
+CTA principal: "Consulter maintenant →"
+Social proof: "⭐ Note moyenne 4.9/5 · Plus de 50 médecins certifiés · Disponible dans tout le Maroc"
+⚠️ Note : pour le MVP, mettre des chiffres réalistes mais futurs : "Bientôt disponible · 50+ médecins en cours de recrutement". Sois honnête, ne mens pas sur les chiffres.
+Image hero : aucune image complexe pour le MVP. Préfère un design propre avec whitespace généreux. Si tu veux une touche visuelle, ajoute discrètement à droite (sur desktop) un élément abstract subtle (pattern de cercles, ou un screenshot mockup discret de l'app).
+Section 2 — Comment ça marche (3 étapes)
+Layout : 3 cards en grid horizontal (desktop) / vertical (mobile)
+┌────────────────────────────────────────────────┐
+│                                                │
+│     Comment ça marche                          │ ← H2 text-3xl/4xl
+│                                                │
+│     En 3 étapes simples, vous parlez           │ ← text-lg
+│     à un médecin.                              │   text-neutral-600
+│                                                │
+│   ┌─────────┐  ┌─────────┐  ┌─────────┐       │
+│   │ 01      │  │ 02      │  │ 03      │       │ ← Number tags
+│   │         │  │         │  │         │       │   text-primary-500
+│   │Décrivez │  │Médecin  │  │Consulta-│       │   font-mono
+│   │vos      │  │trouvé   │  │tion     │       │
+│   │symptômes│  │en moins │  │vidéo +  │       │ ← H3 text-xl
+│   │         │  │de 15 min│  │documents│       │
+│   │         │  │         │  │         │       │
+│   │60 sec   │  │Vérifié, │  │PDFs     │       │ ← text-sm
+│   │de form. │  │certifié │  │téléchar.│       │   text-neutral-600
+│   └─────────┘  └─────────┘  └─────────┘       │
+│                                                │
+└────────────────────────────────────────────────┘
+Texte exact :
+H2: "Comment ça marche"
+Sous-titre: "En 3 étapes simples, vous parlez à un médecin."
+
+Étape 1: "Décrivez vos symptômes"
+  "Une pré-consultation guidée de 60 secondes pour transmettre votre dossier médical au médecin."
+
+Étape 2: "Un médecin disponible vous prend en charge"
+  "Le premier médecin certifié disponible vous reçoit. Tous nos médecins sont inscrits à l'Ordre des Médecins du Maroc."
+
+Étape 3: "Consultation vidéo + documents"
+  "Consultation par visioconférence sécurisée. Compte-rendu, ordonnance et reçu téléchargeables immédiatement."
+Section 3 — Pourquoi Medapp (4 features cards)
+Layout : 2x2 grid (desktop) / 1 colonne (mobile)
+Cards avec icon Lucide en haut + titre + description :
+┌──────────────────────┐  ┌──────────────────────┐
+│ [Icon Clock]         │  │ [Icon Shield-Check]  │
+│                      │  │                      │
+│ En moins de 15 min   │  │ Standard qualité     │
+│                      │  │                      │
+│ Sans rendez-vous,    │  │ Tous nos médecins    │
+│ disponible 7j/7      │  │ sont vérifiés et     │
+│ jusqu'à 23h.         │  │ notés par patients.  │
+└──────────────────────┘  └──────────────────────┘
+┌──────────────────────┐  ┌──────────────────────┐
+│ [Icon FileText]      │  │ [Icon Wallet]        │
+│                      │  │                      │
+│ Dossier unifié       │  │ 150 MAD, sans surpris│
+│                      │  │                      │
+│ Votre dossier vous   │  │ Tarif unique. Rem-   │
+│ suit chez tous nos   │  │ boursé si aucun méd. │
+│ médecins.            │  │ disponible.          │
+└──────────────────────┘  └──────────────────────┘
+Texte exact :
+H2: "Pourquoi choisir Medapp"
+
+Feature 1: "En moins de 15 minutes"
+  Description: "Sans rendez-vous, disponible 7j/7 jusqu'à 23h. Plus besoin d'attendre des semaines pour un créneau."
+
+Feature 2: "Standard qualité Medapp"
+  Description: "Tous nos médecins sont diplômés, inscrits à l'Ordre des Médecins du Maroc, et notés en continu par les patients."
+
+Feature 3: "Dossier médical unifié"
+  Description: "Votre dossier vous suit entre tous nos médecins. Plus besoin de tout réexpliquer à chaque consultation."
+
+Feature 4: "150 MAD, sans surprise"
+  Description: "Tarif unique transparent. Vous êtes automatiquement remboursé si aucun médecin n'est disponible sous 15 minutes."
+Section 4 — Témoignages (placeholder pour MVP)
+Important : pour le MVP, NE PAS inventer de faux témoignages. C'est mensonger et illégal CNDP.
+Solution :
+H2: "Bientôt, vos témoignages"
+Sous-titre: "Medapp ouvre ses portes aux premiers patients. Soyez parmi les premiers à tester et nous partager votre expérience."
+
+[CTA: "Devenir testeur beta →"]
+Quand tu auras de vrais témoignages (après les beta testers), tu remplaceras cette section.
+Section 5 — Trust signals
+Layout : 5 colonnes de logos/badges (desktop) / 2 colonnes (mobile)
+┌────────────────────────────────────────────────┐
+│                                                │
+│     Notre engagement qualité                   │
+│                                                │
+│  ✓ Conforme        ✓ Médecins      ✓ Hébergmt  │
+│    CNDP              inscrits        données    │
+│    (loi 09-08)       Ordre Maroc     santé     │
+│                                                │
+│  ✓ Paiement        ✓ Garantie                  │
+│    sécurisé          remboursemt                │
+│    CMI               sous 15 min                │
+│                                                │
+└────────────────────────────────────────────────┘
+Pour MVP, juste les textes en bullets avec icônes Lucide check. Pas besoin de "vrais" logos.
+Section 6 — FAQ rapide (5 questions)
+Utilise un Accordion (Radix UI Accordion).
+H2: "Questions fréquentes"
+
+Q1: "Comment fonctionne la téléconsultation ?"
+  "Vous payez 150 MAD, vous remplissez 60 secondes de pré-consultation, le premier médecin disponible vous prend en charge en visioconférence. À la fin, vous recevez votre compte-rendu, ordonnance et reçu en PDF."
+
+Q2: "Que se passe-t-il si aucun médecin n'est disponible ?"
+  "Si aucun médecin ne vous prend en charge dans les 15 minutes, vous êtes automatiquement remboursé intégralement."
+
+Q3: "Mes données médicales sont-elles sécurisées ?"
+  "Oui. Medapp est conforme à la loi 09-08 (CNDP) du Maroc. Vos données sont chiffrées, hébergées sur des serveurs sécurisés, et soumises au secret médical."
+
+Q4: "Puis-je obtenir une ordonnance ?"
+  "Oui. Si le médecin le juge nécessaire, il vous délivre une ordonnance valable dans toutes les pharmacies du Maroc, téléchargeable immédiatement après la consultation."
+
+Q5: "Pour quels motifs puis-je consulter ?"
+  "Médecine générale principalement : symptômes ORL (rhume, mal de gorge), troubles digestifs, douleurs articulaires, fatigue, anxiété, infections urinaires, allergies, renouvellement d'ordonnance, etc. Pour une urgence vitale, appelez le 15 ou 19."
+
+[Lien: "Voir toutes les questions →" → /comment-ca-marche]
+Section 7 — CTA final
+┌────────────────────────────────────────────────┐
+│                                                │
+│     Prêt à consulter un médecin ?              │ ← H2 large
+│                                                │
+│     150 MAD · Sans rendez-vous · Sous 15 min   │
+│                                                │
+│     [Consulter maintenant →]                   │
+│                                                │
+│     Vous êtes médecin ? [Rejoindre Medapp →]   │ ← Lien secondaire
+│                                                │
+└────────────────────────────────────────────────┘
+PAGE 2 — Comment ça marche (/comment-ca-marche)
+Page détaillée avec :
+
+Hero : "Comment fonctionne Medapp"
+Section "Le parcours patient" en 6 étapes détaillées
+Section "Les engagements Medapp" (qualité, sécurité, transparence)
+FAQ étendue (15 questions)
+CTA final
+
+PAGE 3 — Tarifs (/tarifs)
+Page transparence prix :
+
+Hero : "Un tarif unique, sans surprise"
+Card centrale : "150 MAD par consultation"
+Liste de ce qui est inclus / non inclus
+Comparaison vs cabinet libéral (tableau honnête)
+Politique de remboursement détaillée
+FAQ tarifs
+
+Texte clé :
+Inclus dans 150 MAD :
+✓ Consultation vidéo avec médecin certifié (jusqu'à 30 min)
+✓ Compte-rendu médical PDF
+✓ Ordonnance PDF si nécessaire
+✓ Reçu de paiement PDF
+✓ Dossier médical conservé sur Medapp
+✓ Remboursement automatique si aucun médecin disponible
+
+Non inclus :
+✗ Médicaments (à acheter en pharmacie)
+✗ Examens complémentaires (sang, imagerie)
+✗ Consultations spécialisées (V2 - bientôt)
+✗ Suivi long terme (V2)
+
+Mode de paiement :
+Cartes bancaires marocaines (CMI), Visa, Mastercard.
+Paiement sécurisé. Aucune donnée bancaire stockée par Medapp.
+PAGE 4 — Médecins (/medecins)
+Page recrutement médecins (très importante stratégiquement).
+Layout :
+
+Hero : "Rejoignez Medapp"
+
+"Augmentez vos revenus tout en gardant votre liberté."
+CTA : "Postuler en 5 min →" (vers form contact)
+
+
+Section "Pourquoi rejoindre Medapp"
+
+80% de revenu par consultation (vs 70-75% chez DabaDoc)
+Pas d'abonnement mensuel
+Liberté totale sur vos plages horaires
+Paiement automatique mensuel
+Outils pro : dossier patient, ordonnances, factures, stats
+
+
+Section "Profil recherché"
+
+Diplôme de médecin général ou spécialiste
+Inscrit à l'Ordre des Médecins du Maroc
+Expérience minimum 2 ans
+Ordinateur + connexion internet stable
+Capacité à consulter en français et/ou arabe
+
+
+Section "Comment ça se passe ?" en 4 étapes
+
+Inscription en ligne (5 min)
+Vérification documents (24-48h)
+Onboarding personnalisé (1h)
+Première consultation
+
+
+Section "Combien je gagne ?" avec calculateur simple
+
+"Si je fais 5 consultations/jour, 5 jours/semaine"
+Affichage : "Vous gagnerez X MAD/mois"
+Formule : 5 consultations × 5 jours × 4 semaines × 150 × 0.80 = 12 000 MAD/mois
+
+
+CTA final : "Postuler maintenant →"
+
+PAGE 5 — Sécurité (/securite)
+Page conformité et trust :
+
+Hero : "Vos données médicales protégées"
+Section "Conformité légale"
+
+Loi 09-08 (CNDP) - protection données personnelles
+Loi 131-13 - encadrement télémédecine
+Code de déontologie médicale marocaine
+
+
+Section "Sécurité technique"
+
+Chiffrement TLS 1.3 toutes communications
+Hébergement sécurisé conforme HDS-équivalent
+Sauvegarde quotidienne chiffrée
+Audits sécurité annuels (V2)
+
+
+Section "Vos droits"
+
+Droit d'accès à vos données
+Droit de rectification
+Droit à l'effacement
+Droit à la portabilité
+Comment exercer vos droits
+
+
+Contact CNDP / DPO Medapp
+
+PAGE 6 — Contact (/contact)
+Form simple :
+Nous contacter
+
+Sujet [dropdown]
+  - Question avant de m'inscrire
+  - Problème technique
+  - Réclamation
+  - Devenir médecin partenaire
+  - Partenariat / presse
+  - Autre
+
+Nom complet [input]
+Email [input]
+Téléphone [input]
+Message [textarea]
+
+[Envoyer]
+
+Ou contactez-nous directement :
+contact@medapp.ma
++212 522 XX XX XX
+Pour le MVP, le form envoie un POST vers un endpoint mock (/api/contact) qui pour l'instant juste logge le message ou envoie un email à contact@medapp.ma (configurable via env).
+⚠️ Pas de form en BDD pour MVP. Juste un email envoyé ou un log. La table ContactMessage viendra en V2 si besoin.
+PAGE 7 — À propos (/a-propos)
+Page storytelling :
+
+Hero : "Notre mission"
+
+"Rendre l'accès à un médecin de qualité simple, rapide et abordable au Maroc."
+
+
+Section "L'histoire de Medapp"
+
+Pour MVP, garde simple : "Medapp est née du constat que les marocains attendent en moyenne X jours pour un RDV médical, et que la téléconsultation peut combler ce manque."
+
+
+Section "Nos valeurs"
+
+Qualité médicale absolue
+Transparence des prix
+Protection des données
+Accessibilité géographique
+
+
+Section "L'équipe" — pour le MVP, garde minimaliste. NE PAS inventer de faux co-fondateurs.
+
+Solution : "Medapp est une initiative portée par [Ton Prénom], développeur et [autre rôle]. Nous construisons Medapp en collaboration avec des médecins partenaires marocains."
+
+
+CTA final
+
+PAGES LÉGALES (/mentions-legales, /confidentialite, /cgu)
+Pour le MVP, placeholder acceptable :
+[Page Mentions légales]
+
+Identité de l'éditeur :
+Medapp Maroc SARL
+[Adresse à remplir avant prod]
+ICE : [À remplir]
+RC : [À remplir]
+IF : [À remplir]
+Email : contact@medapp.ma
+
+Hébergement :
+[À remplir avant prod]
+
+Directeur de publication :
+[Ton nom]
+
+Note : Document à compléter avec un avocat avant la mise en production.
+Idem pour confidentialité et CGU. À fournir par un avocat marocain spécialisé avant la prod.
+🧱 Composants réutilisables
+TopNav
+tsx// Layout : Logo gauche · Liens centre (desktop) · CTAs droite
+<header className="sticky top-0 z-50 bg-white border-b border-neutral-200">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <Link href="/" className="flex items-center gap-2">
+      <Logo className="h-8 w-8" />
+      <span className="font-bold text-lg">Medapp</span>
+    </Link>
+
+    <nav className="hidden md:flex items-center gap-8">
+      <Link href="/comment-ca-marche">Comment ça marche</Link>
+      <Link href="/tarifs">Tarifs</Link>
+      <Link href="/medecins">Médecins</Link>
+      <Link href="/securite">Sécurité</Link>
+    </nav>
+
+    <div className="flex items-center gap-3">
+      
+        href={`${process.env.NEXT_PUBLIC_PATIENT_APP_URL}/login`}
+        className="text-sm font-medium text-neutral-700 hover:text-neutral-900"
+      >
+        Connexion
+      </a>
+      <Button asChild variant="primary" size="sm">
+        <a href={`${process.env.NEXT_PUBLIC_PATIENT_APP_URL}/consultations/new`}>
+          Consulter →
+        </a>
+      </Button>
+    </div>
+  </div>
+
+  {/* Mobile menu hamburger */}
+  {/* À implémenter avec Radix UI Sheet ou simple state */}
+</header>
+Footer
+Layout : 4 colonnes (desktop) / 1 colonne (mobile)
+Colonne 1 : Logo + tagline + adresse
+Colonne 2 : Produit (Comment ça marche, Tarifs, Sécurité)
+Colonne 3 : Pour les médecins (Devenir médecin, Espace médecin)
+Colonne 4 : Légal (Mentions, Confidentialité, CGU, Cookies)
+Bas : Copyright + réseaux sociaux + langue (FR/AR pour V2)
+🔍 SEO et métadonnées
+app/layout.tsx
+tsxexport const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL!),
+  title: {
+    default: "Medapp · Téléconsultation médicale au Maroc",
+    template: "%s · Medapp",
+  },
+  description: "Consultez un médecin certifié en moins de 15 minutes. Sans rendez-vous, 7j/7. 150 MAD. Compte-rendu, ordonnance et reçu en PDF.",
+  keywords: ["téléconsultation Maroc", "médecin en ligne Maroc", "consultation vidéo Maroc", "Medapp"],
+  openGraph: {
+    title: "Medapp · Téléconsultation médicale au Maroc",
+    description: "Un médecin disponible en moins de 15 minutes.",
+    url: process.env.NEXT_PUBLIC_SITE_URL,
+    siteName: "Medapp",
+    images: [{ url: "/og-image.jpg", width: 1200, height: 630 }],
+    locale: "fr_MA",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Medapp · Téléconsultation médicale au Maroc",
+    description: "Un médecin disponible en moins de 15 minutes.",
+    images: ["/og-image.jpg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+sitemap.ts
+Génère sitemap automatique avec toutes les pages.
+robots.ts
+typescriptexport default function robots() {
+  return {
+    rules: { userAgent: "*", allow: "/" },
+    sitemap: `${process.env.NEXT_PUBLIC_SITE_URL}/sitemap.xml`,
+  };
+}
+Schema.org structured data (homepage)
+Ajoute dans le <head> de la homepage du JSON-LD :
+html<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "MedicalOrganization",
+  "name": "Medapp",
+  "description": "Plateforme de téléconsultation médicale au Maroc",
+  "url": "https://medapp.ma",
+  "logo": "https://medapp.ma/logo.svg",
+  "address": {
+    "@type": "PostalAddress",
+    "addressCountry": "MA"
+  },
+  "medicalSpecialty": "GeneralPractice",
+  "availableService": {
+    "@type": "MedicalProcedure",
+    "name": "Téléconsultation"
+  }
+}
+</script>
+🎨 Image hero
+Pour le MVP, n'utilise pas de banque d'images stock. C'est ce qui fait que la plupart des sites paraissent génériques.
+Solutions :
+
+Pas d'image sur le hero, juste un beau layout texte (option recommandée pour MVP)
+SVG abstract subtle en arrière-plan (cercles, gradients très légers)
+Mockup app : un screenshot de ton dashboard Medapp affiché sur un iPhone illustré (CSS pur ou Figma export)
+
+Pour l'image og-image.jpg (Open Graph 1200x630), génère un visuel propre avec :
+
+Fond blanc cassé
+Logo Medapp
+Texte "Un médecin disponible en moins de 15 minutes"
+Petit accent primary
+
+Tu peux le faire avec Figma, Canva, ou même un simple HTML/CSS exporté en image.
+🧪 Tests à valider
+
+Lighthouse sur la homepage : Performance > 95, Accessibility > 95, Best Practices > 95, SEO > 95
+Mobile 375px : aucun overflow horizontal sur les 7 pages
+CTAs fonctionnels : tous les "Consulter maintenant" pointent vers ${PATIENT_APP_URL}/consultations/new
+Lien Espace médecin : pointe vers ${DOCTOR_APP_URL}/login
+Form contact : envoie un email/log côté backend (configurable)
+Sitemap.xml accessible et liste toutes les pages
+Robots.txt accessible
+Open Graph : tester avec https://www.opengraph.xyz/ (preview Facebook/LinkedIn/Twitter)
+Schema.org : tester avec https://validator.schema.org/
+Toutes les pages ont un <h1> unique, des metadata propres, du contenu
+
+✅ Livraison attendue
+
+Nouveau projet apps/web-landing/ créé avec Next.js 15 + Tailwind + design system Forward
+Variables d'environnement configurées
+Turbo.json mis à jour avec le nouveau projet
+7 pages créées :
+
+Homepage (la plus importante)
+Comment ça marche
+Tarifs
+Médecins (recrutement)
+Sécurité
+Contact
+À propos
+
+
+Pages légales placeholder (mentions, confidentialité, CGU)
+TopNav + Footer réutilisables sur toutes les pages
+SEO complet : metadata, sitemap, robots, Open Graph, Schema.org
+Tous les CTAs pointent vers les bonnes URLs (PATIENT_APP_URL ou DOCTOR_APP_URL)
+Tests 1-10 ci-dessus tous validés
+Note dans KNOWN_ISSUES.md :
+
+"Pages légales (mentions, CGU, confidentialité) à faire valider par avocat marocain avant prod"
+"Form contact envoie email mock pour MVP, à connecter à un vrai service email en prod (Postmark/Mailgun)"
+"OG-image générique, à remplacer par image custom design"
+"Témoignages absents pour MVP — placeholder en attendant beta-testers réels"
+
+
+
+❌ Hors scope
+
+Blog (V2 - SEO content marketing)
+Multi-langue arabe (V2)
+Animations Framer Motion (V2 - polish)
+A/B testing (V2)
+Analytics Google/Hotjar (V2)
+Cookies banner CNDP (V2 - obligatoire avant prod)
+Témoignages réels (après beta-testers)
+
+🚦 Étapes recommandées
+
+Setup projet (0.5 jour)
+
+Création web-landing
+Tailwind config + design tokens copy
+Composants UI de base (Button, Card, Badge)
+TopNav + Footer
+
+
+Homepage (1.5 jours)
+
+C'est la plus importante
+Itérer sur le hero plusieurs fois
+Bien soigner les sections "Comment ça marche" et "Pourquoi Medapp"
+
+
+Pages secondaires (1 jour)
+
+Comment ça marche
+Tarifs
+Sécurité
+
+
+Page médecins (0.5 jour) — c'est ton outil de recrutement, soigne-la
+Pages utilitaires (0.5 jour)
+
+Contact
+À propos
+Pages légales placeholder
+
+
+SEO + métadonnées (0.5 jour)
+
+Sitemap, robots, Open Graph, Schema.org
+Lighthouse optimisations
+
+
+Tests + polish (0.5 jour)
+
+Mobile 375px
+Vérification CTAs
+Lighthouse
+
+
+
+Total : ~5 jours d'exécution Sonnet.
+Commit après chaque étape majeure (chaque page).
+⚠️ Points d'attention CRITIQUES
+1. Ne pas mentir sur les chiffres
+Pour le MVP, tu n'as pas de vrais médecins ni de vraies consultations. Ne pas inventer "+12 000 consultations" si c'est faux. Préfère :
+
+"Bientôt disponible · Soyez parmi les premiers patients"
+"Recrutement actif · Plus de 50 médecins en cours d'inscription"
+Sois honnête sur le statut beta. Ça te protège légalement et c'est plus crédible.
+
+2. Ne pas inventer de témoignages
+Aucun fake testimonial. Section "Bientôt vos témoignages" en attendant les vrais.
+3. Pages légales : placeholder mais pas absentes
+Les pages mentions/confidentialité/CGU doivent exister avec un placeholder explicite. Sinon, ton site est non conforme dès le jour 1.
+Avant prod, fais valider par un avocat marocain spécialisé en droit du numérique. Compte 5000-10 000 MAD pour un pack complet.
+4. Cookies CNDP
+Pour la prod, bandeau cookies obligatoire (loi 09-08). Pour MVP en local, pas urgent. Mais avant la prod, ajouter un bandeau (utilise cookie-banner-react ou similaire).
+5. Contact email = configure-le bien
+Pour le form contact, dès que tu déploies, configure :
+
+Soit Postmark (essai gratuit, très bon pour les transactionnels)
+Soit Mailgun (free tier généreux)
+Soit SES (AWS) si tu veux scaler
+
+Email de réception : contact@medapp.ma (à créer chez ton hébergeur DNS).

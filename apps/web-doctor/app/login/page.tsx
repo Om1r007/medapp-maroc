@@ -3,8 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Mail, Lock } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 import type { AuthResponse } from "@medapp/shared-types";
 
 export default function LoginPage() {
@@ -20,10 +23,7 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      const data = await api.post<AuthResponse>("/auth/login", {
-        email,
-        password,
-      });
+      const data = await api.post<AuthResponse>("/auth/login", { email, password });
       if (data.user.role !== "DOCTOR") {
         setError("Cet espace est réservé aux médecins. Connectez-vous via l'espace patient.");
         return;
@@ -32,9 +32,9 @@ export default function LoginPage() {
       router.push("/dashboard");
     } catch (err) {
       if (err instanceof ApiError) {
-        setError("Identifiants invalides");
+        setError("Identifiants invalides. Vérifiez votre email et mot de passe.");
       } else {
-        setError("Erreur réseau");
+        setError("Erreur réseau. Réessayez dans quelques instants.");
       }
     } finally {
       setLoading(false);
@@ -42,78 +42,82 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-md">
-        <h1 className="text-2xl font-bold text-brand-dark">Connexion</h1>
-        <p className="mt-1 text-sm text-gray-600">
-          Accédez à votre espace patient
-        </p>
+    <div className="min-h-screen bg-neutral-50 flex flex-col">
+      <header className="bg-white border-b border-neutral-200 h-16 flex items-center px-6">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded bg-primary-500 flex items-center justify-center">
+            <span className="text-white text-xs font-bold">M</span>
+          </div>
+          <span className="font-semibold text-neutral-900 text-sm tracking-tight">
+            Medapp <span className="text-neutral-400 font-normal">Praticien</span>
+          </span>
+        </div>
+      </header>
 
-        <form onSubmit={onSubmit} className="mt-6 space-y-4">
-          <Field
-            label="Email"
-            type="email"
-            value={email}
-            onChange={setEmail}
-            required
-          />
-          <Field
-            label="Mot de passe"
-            type="password"
-            value={password}
-            onChange={setPassword}
-            required
-          />
+      <main className="flex-1 flex items-center justify-center p-6">
+        <div className="w-full max-w-md">
+          <div className="bg-white border border-neutral-200 rounded-xl p-8">
+            <div className="mb-8">
+              <h1 className="text-2xl font-semibold text-neutral-900">
+                Connexion praticien
+              </h1>
+              <p className="mt-1 text-sm text-neutral-500">
+                Accédez à votre espace médecin
+              </p>
+            </div>
 
-          {error && (
-            <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">
-              {error}
+            <form onSubmit={onSubmit} className="space-y-5">
+              <Input
+                label="Adresse email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="docteur@email.com"
+                iconLeft={<Mail className="h-4 w-4" />}
+                required
+                autoComplete="email"
+              />
+              <Input
+                label="Mot de passe"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                iconLeft={<Lock className="h-4 w-4" />}
+                required
+                autoComplete="current-password"
+                errorMessage={error ?? undefined}
+              />
+
+              <Button type="submit" fullWidth size="lg" loading={loading}>
+                Se connecter
+              </Button>
+            </form>
+
+            <p className="mt-6 text-center text-sm text-neutral-500">
+              Pas encore inscrit ?{" "}
+              <Link
+                href="/signup"
+                className="font-medium text-primary-600 hover:text-primary-700 transition-colors"
+              >
+                Créer un compte praticien
+              </Link>
             </p>
-          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-brand py-3 font-medium text-white hover:bg-brand-dark disabled:opacity-50"
-          >
-            {loading ? "Connexion…" : "Se connecter"}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-gray-600">
-          Pas encore de compte ?{" "}
-          <Link href="/signup" className="font-medium text-brand">
-            Créer un compte
-          </Link>
-        </p>
-      </div>
-    </main>
-  );
-}
-
-function Field({
-  label,
-  type,
-  value,
-  onChange,
-  required,
-}: {
-  label: string;
-  type: string;
-  value: string;
-  onChange: (v: string) => void;
-  required?: boolean;
-}) {
-  return (
-    <label className="block">
-      <span className="text-sm font-medium text-gray-700">{label}</span>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-        className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-      />
-    </label>
+            <div className="mt-4 pt-4 border-t border-neutral-100">
+              <p className="text-center text-xs text-neutral-400">
+                Espace patient ?{" "}
+                <a
+                  href="http://localhost:3000/login"
+                  className="text-primary-600 hover:text-primary-700"
+                >
+                  Connexion patient
+                </a>
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
   );
 }

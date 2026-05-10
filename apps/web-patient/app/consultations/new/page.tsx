@@ -2,17 +2,27 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { useRequireAuth } from "@/lib/use-require-auth";
 import { api } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/error-message";
-import type { Consultation } from "@medapp/shared-types";
+import type { Consultation, ReferringDoctor } from "@medapp/shared-types";
 
 export default function NewConsultationPage() {
   const user = useRequireAuth();
   const router = useRouter();
   const [reason, setReason] = useState("");
+  const [mode, setMode] = useState<"standard" | "referring">("standard");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { data: referringData } = useQuery<{ referringDoctor: ReferringDoctor | null }>({
+    queryKey: ["referring-doctor"],
+    queryFn: () => api.get("/patients/me/referring-doctor"),
+    enabled: !!user,
+  });
+
+  const referringDoctor = referringData?.referringDoctor;
 
   if (!user) return null;
 
@@ -22,9 +32,13 @@ export default function NewConsultationPage() {
     setError(null);
 
     try {
-      const consultation = await api.post<Consultation>("/consultations", {
+      const body: { reason?: string; requestedDoctorId?: string } = {
         reason: reason.trim() || undefined,
-      });
+      };
+      if (mode === "referring" && referringDoctor) {
+        body.requestedDoctorId = referringDoctor.id;
+      }
+      const consultation = await api.post<Consultation>("/consultations", body);
       router.push(`/payment/${consultation.id}`);
     } catch (err) {
       setError(extractErrorMessage(err));
@@ -51,6 +65,55 @@ export default function NewConsultationPage() {
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+            {/* Mode choice — only shown if patient has a referring doctor */}
+            {referringDoctor && (
+              <div>
+                <p className="mb-2 text-sm font-medium text-gray-700">
+                  Type de consultation
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setMode("standard")}
+                    className={`rounded-xl border-2 p-4 text-left transition-colors ${
+                      mode === "standard"
+                        ? "border-brand bg-brand/5"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <p className="text-sm font-semibold text-gray-900">
+                      File générale
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Premier médecin disponible — attente plus courte
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("referring")}
+                    className={`rounded-xl border-2 p-4 text-left transition-colors ${
+                      mode === "referring"
+                        ? "border-brand bg-brand/5"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <p className="text-sm font-semibold text-gray-900">
+                      Mon médecin référent
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Dr. {referringDoctor.firstName} {referringDoctor.lastName}
+                      {referringDoctor.speciality && ` · ${referringDoctor.speciality}`}
+                    </p>
+                  </button>
+                </div>
+                {mode === "referring" && (
+                  <p className="mt-2 text-xs text-amber-600 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
+                    Vous attendrez dans la file dédiée à votre médecin référent. Si non disponible sous 20 min, vous pourrez rejoindre la file générale.
+                  </p>
+                )}
+              </div>
+            )}
+
             <div>
               <label
                 htmlFor="reason"

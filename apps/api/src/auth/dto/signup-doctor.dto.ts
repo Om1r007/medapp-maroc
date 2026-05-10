@@ -1,9 +1,14 @@
 import {
+  IsArray,
   IsEmail,
+  IsInt,
+  IsOptional,
   IsString,
-  MinLength,
-  MaxLength,
   Matches,
+  MaxLength,
+  Min,
+  MinLength,
+  Max,
 } from "class-validator";
 
 export class SignupDoctorDto {
@@ -43,4 +48,37 @@ export class SignupDoctorDto {
   @MinLength(2)
   @MaxLength(100)
   speciality!: string;
+
+  // Champs enrichis — optionnels à l'inscription, requis pour verificationStep PROFESSIONAL
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  inpe?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  diplomaUniversity?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1950)
+  @Max(new Date().getFullYear())
+  diplomaYear?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(60)
+  yearsOfExperience?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  languages?: string[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  bio?: string;
 }

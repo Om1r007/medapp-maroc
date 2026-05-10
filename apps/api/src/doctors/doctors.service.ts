@@ -94,11 +94,23 @@ export class DoctorsService {
         status: true,
         amount: true,
         matchedAt: true,
-        patient: { select: { firstName: true, lastName: true } },
+        preConsultData: true,
+        preConsultMode: true,
+        patient: {
+          select: {
+            firstName: true,
+            lastName: true,
+            dateOfBirth: true,
+            sex: true,
+          },
+        },
       },
     });
 
     if (!consultation) return null;
+
+    const ageMs = Date.now() - consultation.patient.dateOfBirth.getTime();
+    const age = Math.floor(ageMs / (1000 * 60 * 60 * 24 * 365.25));
 
     return {
       id: consultation.id,
@@ -106,7 +118,15 @@ export class DoctorsService {
       status: consultation.status,
       amount: Number(consultation.amount),
       matchedAt: consultation.matchedAt?.toISOString(),
-      patient: consultation.patient,
+      preConsultData: consultation.preConsultData,
+      preConsultMode: consultation.preConsultMode,
+      isUrgent: consultation.preConsultMode === "URGENT",
+      patient: {
+        firstName: consultation.patient.firstName,
+        lastName: consultation.patient.lastName,
+        age,
+        sex: consultation.patient.sex,
+      },
     };
   }
 
@@ -198,5 +218,97 @@ export class DoctorsService {
     );
 
     return updated;
+  }
+
+  async getPublicProfile(doctorId: string) {
+    const doctor = await this.prisma.doctor.findUnique({
+      where: { id: doctorId, status: "VERIFIED" },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        speciality: true,
+        bio: true,
+        yearsOfExperience: true,
+        languages: true,
+        profilePhotoUrl: true,
+        qualityScore: true,
+        totalRatings: true,
+        verifiedAt: true,
+      },
+    });
+
+    if (!doctor) throw new NotFoundException("Médecin introuvable");
+
+    return {
+      id: doctor.id,
+      firstName: doctor.firstName,
+      lastName: `${doctor.lastName[0]}.`,
+      speciality: doctor.speciality,
+      bio: doctor.bio,
+      yearsOfExperience: doctor.yearsOfExperience,
+      languages: doctor.languages,
+      profilePhotoUrl: doctor.profilePhotoUrl,
+      qualityScore: doctor.qualityScore,
+      totalRatings: doctor.totalRatings,
+      verifiedAt: doctor.verifiedAt?.toISOString() ?? null,
+    };
+  }
+
+  async getReferringPatientsCount(userId: string): Promise<{ count: number }> {
+    const doctor = await this.prisma.doctor.findUnique({ where: { userId } });
+    if (!doctor) return { count: 0 };
+    const count = await this.prisma.patient.count({
+      where: { referringDoctorId: doctor.id },
+    });
+    return { count };
+  }
+
+  async getNextAvailabilityForDoctor(doctorId: string) {
+    return this.queueService.getNextAvailabilityForDoctor(doctorId);
+  }
+
+  async getMyQualityStats(userId: string) {
+    const doctor = await this.prisma.doctor.findUnique({ where: { userId } });
+    if (!doctor) throw new NotFoundException("Médecin introuvable");
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const [recentRatings, prevRatings] = await Promise.all([
+      this.prisma.rating.findMany({
+        where: { doctorId: doctor.id, createdAt: { gte: thirtyDaysAgo } },
+        select: { stars: true },
+      }),
+      this.prisma.rating.findMany({
+        where: {
+          doctorId: doctor.id,
+          createdAt: {
+            gte: new Date(thirtyDaysAgo.getTime() - 30 * 24 * 60 * 60 * 1000),
+            lt: thirtyDaysAgo,
+          },
+        },
+        select: { stars: true },
+      }),
+    ]);
+
+    const recentAvg =
+      recentRatings.length > 0
+        ? recentRatings.reduce((s, r) => s + r.stars, 0) / recentRatings.length
+        : null;
+    const prevAvg =
+      prevRatings.length > 0
+        ? prevRatings.reduce((s, r) => s + r.stars, 0) / prevRatings.length
+        : null;
+    const trend =
+      recentAvg !== null && prevAvg !== null
+        ? Math.round((recentAvg - prevAvg) * 10) / 10
+        : null;
+
+    return {
+      qualityScore: doctor.qualityScore,
+      totalRatings: doctor.totalRatings,
+      trend,
+    };
   }
 }

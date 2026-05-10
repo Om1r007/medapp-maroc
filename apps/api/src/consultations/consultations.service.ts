@@ -36,7 +36,7 @@ export class ConsultationsService {
     return this.prisma.consultation.findFirst({
       where: {
         patientId: patient.id,
-        status: { in: ["WAITING_PAYMENT", "IN_QUEUE", "MATCHED", "IN_PROGRESS"] },
+        status: { in: ["WAITING_PAYMENT", "WAITING_PRE_CONSULT", "IN_QUEUE", "MATCHED", "IN_PROGRESS"] },
       },
       orderBy: { createdAt: "desc" },
       select: { id: true, status: true, reason: true, amount: true, createdAt: true },
@@ -73,7 +73,7 @@ export class ConsultationsService {
     const active = await this.prisma.consultation.findFirst({
       where: {
         patientId: patient.id,
-        status: { in: ["WAITING_PAYMENT", "IN_QUEUE", "MATCHED", "IN_PROGRESS"] },
+        status: { in: ["WAITING_PAYMENT", "WAITING_PRE_CONSULT", "IN_QUEUE", "MATCHED", "IN_PROGRESS"] },
       },
       select: { id: true },
     });
@@ -90,6 +90,8 @@ export class ConsultationsService {
         status: "WAITING_PAYMENT",
         amount: STANDARD_FEE,
         reason: dto.reason,
+        requestedDoctorId: dto.requestedDoctorId ?? null,
+        isReferringRequest: !!dto.requestedDoctorId,
       },
     });
 
@@ -151,6 +153,20 @@ export class ConsultationsService {
         )
       : 0;
 
+    // Referring-mode extra info
+    const fullConsult = await this.prisma.consultation.findUnique({
+      where: { id: consultationId },
+      select: {
+        isReferringRequest: true,
+        queuedAt: true,
+        requestedDoctor: { select: { firstName: true, lastName: true } },
+      },
+    });
+
+    const referringWaitedMinutes = fullConsult?.queuedAt
+      ? Math.floor((Date.now() - fullConsult.queuedAt.getTime()) / 60000)
+      : 0;
+
     return {
       consultationId: consultation.id,
       status: consultation.status,
@@ -159,13 +175,58 @@ export class ConsultationsService {
       estimatedWaitMinutes: position * avgMin,
       timeRemainingSeconds,
       queuedAt: consultation.queuedAt,
+      isReferringRequest: fullConsult?.isReferringRequest ?? false,
+      requestedDoctorName: fullConsult?.requestedDoctor
+        ? `Dr. ${fullConsult.requestedDoctor.firstName} ${fullConsult.requestedDoctor.lastName}`
+        : null,
+      referringWaitedMinutes,
     };
+  }
+
+  async fallbackToGlobal(consultationId: string, userId: string) {
+    const patient = await this.prisma.patient.findUnique({ where: { userId } });
+    if (!patient) throw new NotFoundException("Patient introuvable");
+
+    const consultation = await this.prisma.consultation.findUnique({
+      where: { id: consultationId },
+    });
+    if (!consultation) throw new NotFoundException("Consultation introuvable");
+    if (consultation.patientId !== patient.id) throw new ForbiddenException();
+    if (consultation.status !== "IN_QUEUE") {
+      throw new BadRequestException("La consultation n'est pas en file d'attente");
+    }
+    if (!consultation.isReferringRequest) {
+      throw new BadRequestException("Cette consultation n'est pas en mode référent");
+    }
+
+    // Move from referring queue to global queue
+    await this.prisma.consultation.update({
+      where: { id: consultationId },
+      data: {
+        requestedDoctorId: null,
+        fallbackedAt: new Date(),
+        fallbackReason: consultation.queuedAt && (Date.now() - consultation.queuedAt.getTime()) >= 20 * 60 * 1000
+          ? "timeout_20min"
+          : "manual_choice",
+      },
+    });
+
+    // Attempt immediate match with any available doctor
+    const availableDoctor = await this.prisma.doctor.findFirst({
+      where: { status: "VERIFIED", isAvailable: true },
+      select: { id: true },
+    });
+    if (availableDoctor) {
+      await this.queueService.tryMatch(availableDoctor.id);
+    }
+
+    return { success: true, fallbackReason: "manual_choice" };
   }
 
   async cancel(consultationId: string, userId: string): Promise<Consultation> {
     const consultation = await this.findOne(consultationId, userId);
 
-    if (!["WAITING_PAYMENT", "IN_QUEUE"].includes(consultation.status)) {
+    if (!["WAITING_PAYMENT", "WAITING_PRE_CONSULT", "IN_QUEUE"].includes(consultation.status)) {
       throw new BadRequestException(
         "La consultation ne peut pas être annulée dans cet état",
       );
@@ -254,6 +315,7 @@ export class ConsultationsService {
       createdAt: consultation.createdAt.toISOString(),
       startedAt: consultation.startedAt?.toISOString() ?? null,
       endedAt: consultation.endedAt?.toISOString() ?? null,
+      excludedFromSharing: consultation.excludedFromSharing,
       patient: {
         firstName: consultation.patient.firstName,
         lastName: consultation.patient.lastName,

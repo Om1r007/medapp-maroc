@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  Ip,
   Param,
   Patch,
   Post,
@@ -12,12 +13,18 @@ import {
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { DoctorVerifiedGuard } from "../auth/guards/doctor-verified.guard";
 import { DoctorsService } from "./doctors.service";
+import { PatientsService } from "../patients/patients.service";
+import { SharedFileAccessService } from "../sharing/shared-file-access.service";
 import { UpdateAvailabilityDto } from "./dto/update-availability.dto";
 import { EndConsultationDto } from "../consultations/dto/end-consultation.dto";
 
 @Controller("doctors")
 export class DoctorsController {
-  constructor(private readonly doctors: DoctorsService) {}
+  constructor(
+    private readonly doctors: DoctorsService,
+    private readonly patients: PatientsService,
+    private readonly sharedFileAccess: SharedFileAccessService,
+  ) {}
 
   @Get("me")
   @UseGuards(JwtAuthGuard)
@@ -66,5 +73,46 @@ export class DoctorsController {
     @Body() dto: EndConsultationDto,
   ) {
     return this.doctors.endConsultation(consultationId, req.user.id, dto);
+  }
+
+  @Get("me/consultations/:consultationId/patient-summary")
+  @UseGuards(JwtAuthGuard, DoctorVerifiedGuard)
+  getPatientSummary(
+    @Param("consultationId") consultationId: string,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.patients.getPatientSummaryForDoctor(consultationId, req.user.id);
+  }
+
+  @Get("me/quality-stats")
+  @UseGuards(JwtAuthGuard)
+  getQualityStats(@Request() req: { user: { id: string } }) {
+    return this.doctors.getMyQualityStats(req.user.id);
+  }
+
+  @Get("me/referring-patients-count")
+  @UseGuards(JwtAuthGuard, DoctorVerifiedGuard)
+  getReferringPatientsCount(@Request() req: { user: { id: string } }) {
+    return this.doctors.getReferringPatientsCount(req.user.id);
+  }
+
+  @Get("me/consultations/:consultationId/patient-history")
+  @UseGuards(JwtAuthGuard, DoctorVerifiedGuard)
+  getPatientHistory(
+    @Param("consultationId") consultationId: string,
+    @Request() req: { user: { id: string } },
+    @Ip() ip: string,
+  ) {
+    return this.sharedFileAccess.getPatientHistory(consultationId, req.user.id, ip || "unknown");
+  }
+
+  @Get(":id/next-availability")
+  getNextAvailability(@Param("id") id: string) {
+    return this.doctors.getNextAvailabilityForDoctor(id);
+  }
+
+  @Get(":id/public-profile")
+  getPublicProfile(@Param("id") id: string) {
+    return this.doctors.getPublicProfile(id);
   }
 }

@@ -3,9 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
+import { ChevronLeft, Download } from "lucide-react";
 import { useRequireAuth } from "@/lib/use-require-auth";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/cn";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { KpiCard } from "@/components/ui/KpiCard";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -21,16 +27,13 @@ interface InvoiceItem {
   currency: string;
 }
 
-const STATUS_LABELS: Record<InvoiceItem["status"], string> = {
-  ISSUED: "Émise",
-  PAID: "Payée",
-  CANCELLED: "Annulée",
-};
-
-const STATUS_COLORS: Record<InvoiceItem["status"], string> = {
-  ISSUED: "bg-yellow-100 text-yellow-800",
-  PAID: "bg-green-100 text-green-800",
-  CANCELLED: "bg-gray-100 text-gray-500",
+const STATUS_MAP: Record<
+  InvoiceItem["status"],
+  { label: string; variant: "neutral" | "success" | "warning" }
+> = {
+  ISSUED: { label: "Émise", variant: "warning" },
+  PAID: { label: "Payée", variant: "success" },
+  CANCELLED: { label: "Annulée", variant: "neutral" },
 };
 
 async function downloadPdf(invoiceId: string, invoiceNumber: string) {
@@ -52,8 +55,7 @@ async function downloadPdf(invoiceId: string, invoiceNumber: string) {
 
 function formatPeriod(start: string | null, end: string | null): string {
   if (!start || !end) return "—";
-  const opts: Intl.DateTimeFormatOptions = { month: "long", year: "numeric" };
-  return new Date(start).toLocaleDateString("fr-FR", opts);
+  return new Date(start).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
 }
 
 export default function DoctorInvoicesPage() {
@@ -95,112 +97,170 @@ export default function DoctorInvoicesPage() {
   if (!user) return null;
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto max-w-4xl space-y-6">
-
-        <header className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-brand-dark">Mes factures</h1>
-            <p className="mt-1 text-sm text-gray-500">
-              Rétrocessions d&apos;honoraires mensuelles
-            </p>
-          </div>
+    <div className="min-h-screen bg-neutral-50">
+      {/* Header */}
+      <header className="sticky top-0 z-20 bg-white border-b border-neutral-200 h-16 flex items-center px-6">
+        <div className="mx-auto w-full max-w-4xl flex items-center gap-3">
           <button
             onClick={() => router.push("/dashboard")}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-100"
+            className="rounded-lg p-1.5 hover:bg-neutral-100 transition-colors"
           >
-            ← Tableau de bord
+            <ChevronLeft className="h-5 w-5 text-neutral-600" />
           </button>
-        </header>
-
-        {/* KPI */}
-        <div className="rounded-2xl bg-white p-6 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-            Total facturé {currentYear}
-          </p>
-          <p className="mt-1 text-3xl font-bold text-brand-dark">
-            {yearTotal.toFixed(2)} MAD
-          </p>
-          <p className="mt-1 text-xs text-gray-400">
-            Net après commission Medapp (montant perçu)
-          </p>
+          <div>
+            <h1 className="text-base font-semibold text-neutral-900">Mes factures</h1>
+            <p className="text-xs text-neutral-400">Rétrocessions d'honoraires mensuelles</p>
+          </div>
         </div>
+      </header>
 
-        {/* Liste */}
-        <div className="rounded-2xl bg-white shadow-sm overflow-hidden">
+      <main className="mx-auto max-w-4xl space-y-4 p-6">
+        {/* KPI */}
+        <KpiCard
+          label={`Total facturé ${currentYear}`}
+          value={`${yearTotal.toFixed(2)} MAD`}
+          subLabel="Net après commission Medapp"
+        />
+
+        {/* Error message */}
+        {downloadError && (
+          <div className="bg-error-50 border border-error-200 rounded-lg px-4 py-3">
+            <p className="text-sm text-error-700">{downloadError}</p>
+          </div>
+        )}
+
+        {/* Invoice list */}
+        <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
           {isPending ? (
-            <div className="flex items-center justify-center p-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand border-t-transparent" />
+            <div className="divide-y divide-neutral-100">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-between px-6 py-4 gap-3">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-6 w-16 rounded-full" />
+                  <Skeleton className="h-8 w-24 rounded-lg" />
+                </div>
+              ))}
             </div>
           ) : error ? (
-            <p className="p-8 text-center text-sm text-red-600">
-              Impossible de charger les factures.
-            </p>
+            <div className="p-8 text-center">
+              <p className="text-sm text-error-600">Impossible de charger les factures.</p>
+            </div>
           ) : !data || data.items.length === 0 ? (
-            <div className="p-12 text-center">
-              <p className="text-gray-500">Aucune facture pour l&apos;instant.</p>
-              <p className="mt-1 text-sm text-gray-400">
-                Les factures mensuelles sont générées le 1er de chaque mois.
-              </p>
+            <div className="p-10">
+              <EmptyState
+                title="Aucune facture"
+                description="Les factures mensuelles sont générées le 1er de chaque mois."
+              />
             </div>
           ) : (
             <>
-              {downloadError && (
-                <p className="border-b border-red-100 bg-red-50 px-6 py-3 text-sm text-red-600">
-                  {downloadError}
-                </p>
-              )}
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  <tr>
-                    <th className="px-6 py-3 text-left">N° Facture</th>
-                    <th className="px-6 py-3 text-left">Période</th>
-                    <th className="px-6 py-3 text-left">Date émission</th>
-                    <th className="px-6 py-3 text-right">Montant net</th>
-                    <th className="px-6 py-3 text-center">Statut</th>
-                    <th className="px-6 py-3 text-center">PDF</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {data.items.map((inv) => (
-                    <tr key={inv.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 font-medium text-gray-800">
-                        {inv.number}
-                      </td>
-                      <td className="px-6 py-4 text-gray-600">
-                        {formatPeriod(inv.periodStart, inv.periodEnd)}
-                      </td>
-                      <td className="px-6 py-4 text-gray-500">
-                        {new Date(inv.issuedAt).toLocaleDateString("fr-FR")}
-                      </td>
-                      <td className="px-6 py-4 text-right font-medium text-gray-800">
-                        {inv.amountTtc.toFixed(2)} {inv.currency}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span
-                          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[inv.status]}`}
-                        >
-                          {STATUS_LABELS[inv.status]}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <button
-                          onClick={() => handleDownload(inv)}
-                          disabled={downloadingId === inv.id}
-                          className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                        >
-                          {downloadingId === inv.id ? "…" : "Télécharger"}
-                        </button>
-                      </td>
+              {/* Desktop table */}
+              <div className="hidden md:block">
+                <table className="w-full text-sm">
+                  <thead className="bg-neutral-50 border-b border-neutral-100">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                        N° Facture
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                        Période
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                        Date
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                        Montant net
+                      </th>
+                      <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                        Statut
+                      </th>
+                      <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                        PDF
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100">
+                    {data.items.map((inv) => {
+                      const s = STATUS_MAP[inv.status];
+                      return (
+                        <tr key={inv.id} className="hover:bg-neutral-50 transition-colors">
+                          <td className="px-6 py-4 font-medium text-neutral-800">
+                            {inv.number}
+                          </td>
+                          <td className="px-6 py-4 text-neutral-600">
+                            {formatPeriod(inv.periodStart, inv.periodEnd)}
+                          </td>
+                          <td className="px-6 py-4 text-neutral-500">
+                            {new Date(inv.issuedAt).toLocaleDateString("fr-FR")}
+                          </td>
+                          <td className="px-6 py-4 text-right font-medium text-neutral-800">
+                            {inv.amountTtc.toFixed(2)} {inv.currency}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <Badge variant={s.variant}>{s.label}</Badge>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <button
+                              onClick={() => handleDownload(inv)}
+                              disabled={downloadingId === inv.id}
+                              className={cn(
+                                "inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700",
+                                "hover:bg-neutral-50 disabled:opacity-50 transition-colors",
+                              )}
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                              {downloadingId === inv.id ? "…" : "Télécharger"}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile list */}
+              <div className="md:hidden divide-y divide-neutral-100">
+                {data.items.map((inv) => {
+                  const s = STATUS_MAP[inv.status];
+                  return (
+                    <div key={inv.id} className="px-4 py-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-neutral-800 text-sm">{inv.number}</p>
+                          <p className="text-xs text-neutral-500 mt-0.5">
+                            {formatPeriod(inv.periodStart, inv.periodEnd)}
+                          </p>
+                          <p className="text-xs text-neutral-400">
+                            {new Date(inv.issuedAt).toLocaleDateString("fr-FR")}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <span className="font-semibold text-neutral-900 text-sm">
+                            {inv.amountTtc.toFixed(2)} {inv.currency}
+                          </span>
+                          <Badge variant={s.variant}>{s.label}</Badge>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDownload(inv)}
+                        disabled={downloadingId === inv.id}
+                        className="mt-3 flex items-center gap-1.5 text-xs font-medium text-neutral-600 hover:text-neutral-900 disabled:opacity-50"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        {downloadingId === inv.id ? "Téléchargement…" : "Télécharger PDF"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </>
           )}
         </div>
-
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

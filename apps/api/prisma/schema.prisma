@@ -42,6 +42,12 @@ model User {
 // PATIENTS
 // ============================================================
 
+enum Sex {
+  M
+  F
+  OTHER
+}
+
 model Patient {
   id          String   @id @default(cuid())
   userId      String   @unique
@@ -52,7 +58,25 @@ model Patient {
   cin         String   @unique
   dateOfBirth DateTime
 
-  consultations Consultation[]
+  // Profil étendu — Brique 6
+  photoUrl    String?
+  sex         Sex?
+  city        String?
+  bloodType   String?   // A+, A-, B+, B-, AB+, AB-, O+, O-, Inconnu
+  heightCm    Int?
+  weightKg    Int?
+  allergies   String[]  @default([])
+  conditions  String[]  @default([])
+  medications String[]  @default([])
+
+  consultations   Consultation[]
+  sharingConsent  SharingConsent?
+  fileAccessLogs  PatientFileAccessLog[]
+
+  // Médecin référent — Brique 6.4
+  referringDoctorId String?
+  referringDoctor   Doctor?   @relation("ReferringDoctor", fields: [referringDoctorId], references: [id])
+  referringSetAt    DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -71,6 +95,13 @@ enum DoctorStatus {
   SUSPENDED
 }
 
+enum VerificationStep {
+  IDENTITY
+  PROFESSIONAL
+  PROFILE
+  APPROVED
+}
+
 model Doctor {
   id              String       @id @default(cuid())
   userId          String       @unique
@@ -79,17 +110,36 @@ model Doctor {
   firstName       String
   lastName        String
   cin             String       @unique
+  inpe            String?      @unique // Identifiant National des Professions de Santé
   ordreNumber     String       @unique // N° Ordre National des Médecins
   speciality      String
   bio             String?
+  diplomaUrl      String?
+  diplomaUniversity String?
+  diplomaYear     Int?
+  yearsOfExperience Int?
+  languages       String[]     @default([])
+  profilePhotoUrl String?
   consultationFee Decimal      @default(150.00) @db.Decimal(10, 2) // MAD
   status          DoctorStatus @default(PENDING)
   isAvailable     Boolean      @default(false)
 
-  consultations         Consultation[]
-  ratings               Rating[]
-  availabilitySlots     AvailabilitySlot[]
-  availabilityExceptions AvailabilityException[]
+  verificationStep    VerificationStep @default(IDENTITY)
+  verifiedAt          DateTime?
+  verifiedByAdminId   String?
+
+  qualityScore    Float?
+  totalRatings    Int          @default(0)
+  suspensionReason String?
+  suspendedAt     DateTime?
+
+  consultations           Consultation[]
+  ratings                 Rating[]
+  availabilitySlots       AvailabilitySlot[]
+  availabilityExceptions  AvailabilityException[]
+  fileAccessLogs          PatientFileAccessLog[]
+  referringPatients       Patient[]               @relation("ReferringDoctor")
+  requestedConsultations  Consultation[]          @relation("RequestedDoctor")
 
   // Override manuel : null = suivre le calendrier ; true/false = forcer
   manualOverride      Boolean?
@@ -108,12 +158,19 @@ model Doctor {
 
 enum ConsultationStatus {
   WAITING_PAYMENT
+  WAITING_PRE_CONSULT
   IN_QUEUE
   MATCHED
   IN_PROGRESS
   COMPLETED
   CANCELLED
   REFUNDED
+}
+
+enum PreConsultMode {
+  STANDARD
+  EXPRESS
+  URGENT
 }
 
 enum PaymentStatus {
@@ -141,6 +198,21 @@ model Consultation {
 
   videoRoomUrl  String?
   videoRoomId   String?
+
+  preConsultData      Json?
+  preConsultMode      PreConsultMode @default(STANDARD)
+  preConsultFilledAt  DateTime?
+
+  excludedFromSharing Boolean   @default(false)
+  excludedReason      String?
+  excludedAt          DateTime?
+
+  // Médecin référent — Brique 6.4
+  requestedDoctorId  String?
+  requestedDoctor    Doctor?   @relation("RequestedDoctor", fields: [requestedDoctorId], references: [id])
+  isReferringRequest Boolean   @default(false)
+  fallbackedAt       DateTime?
+  fallbackReason     String?
 
   queuedAt            DateTime?
   matchedAt           DateTime?
@@ -210,13 +282,16 @@ model Rating {
   consultation   Consultation @relation(fields: [consultationId], references: [id])
   doctorId       String
   doctor         Doctor       @relation(fields: [doctorId], references: [id])
+  patientId      String
 
-  score    Int    // 1 à 5
-  comment  String?
+  stars    Int             // 1 à 5
+  feedback String?
+  tags     String[]        @default([])
 
   createdAt DateTime @default(now())
 
   @@index([doctorId])
+  @@index([patientId])
 }
 
 // ============================================================
@@ -262,4 +337,65 @@ model Invoice {
   @@index([recipientUserId, type])
   @@index([type, periodStart])
   @@index([doctorId, type])
+}
+
+// ============================================================
+// DOSSIER PATIENT PARTAGÉ — Brique 6.3
+// ============================================================
+
+enum ConsentAction {
+  ENABLED
+  DISABLED
+  CGU_UPDATED
+}
+
+enum FileAccessType {
+  VIEW_PROFILE
+  VIEW_HISTORY
+  VIEW_CONSULTATION
+  VIEW_DOCUMENT
+}
+
+model SharingConsent {
+  id            String       @id @default(cuid())
+  patientId     String       @unique
+  isEnabled     Boolean      @default(false)
+  enabledAt     DateTime?
+  disabledAt    DateTime?
+  cguVersion    String
+  ipAddressHash String
+  userAgent     String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  patient       Patient      @relation(fields: [patientId], references: [id])
+  logs          ConsentLog[]
+}
+
+model ConsentLog {
+  id        String        @id @default(cuid())
+  consentId String
+  action    ConsentAction
+  timestamp DateTime      @default(now())
+  ipHash    String
+
+  consent   SharingConsent @relation(fields: [consentId], references: [id])
+
+  @@index([consentId, timestamp])
+}
+
+model PatientFileAccessLog {
+  id             String         @id @default(cuid())
+  patientId      String
+  doctorId       String
+  consultationId String?
+  accessType     FileAccessType
+  accessedAt     DateTime       @default(now())
+  ipHash         String
+
+  patient        Patient        @relation(fields: [patientId], references: [id])
+  doctor         Doctor         @relation(fields: [doctorId], references: [id])
+
+  @@index([patientId, accessedAt])
+  @@index([doctorId, accessedAt])
 }

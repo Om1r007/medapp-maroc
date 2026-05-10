@@ -10,6 +10,7 @@ import {
   QueueService,
 } from "./queue.service";
 import { QueueProcessor } from "./queue.processor";
+import { FallbackCheckerScheduler } from "./fallback-checker.scheduler";
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { QueueProcessor } from "./queue.processor";
     },
     QueueService,
     QueueProcessor,
+    FallbackCheckerScheduler,
   ],
   exports: [QueueService],
 })
